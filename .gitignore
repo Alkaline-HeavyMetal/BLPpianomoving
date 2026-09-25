@@ -1,0 +1,4 @@
+config.local.js
+.netlify/
+node_modules/
+.DS_Store

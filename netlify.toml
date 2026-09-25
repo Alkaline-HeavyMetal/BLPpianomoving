@@ -1,0 +1,37 @@
+[build]
+  publish = "."
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# customer-facing live ETA link: https://<site>/t/<token>
+[[redirects]]
+  from = "/t/*"
+  to = "/track.html"
+  status = 200
+
+[[redirects]]
+  from = "/api/config"
+  to = "/.netlify/functions/config"
+  status = 200
+
+[[redirects]]
+  from = "/api/eta"
+  to = "/.netlify/functions/eta"
+  status = 200
+
+[[redirects]]
+  from = "/api/location"
+  to = "/.netlify/functions/location"
+  status = 200
+
+[[redirects]]
+  from = "/api/track"
+  to = "/.netlify/functions/track"
+  status = 200
+
+[[redirects]]
+  from = "/api/log"
+  to = "/.netlify/functions/log"
+  status = 200

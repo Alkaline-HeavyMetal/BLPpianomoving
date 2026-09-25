@@ -1,0 +1,13 @@
+{
+  "name": "blp-movers",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Brigham Larson Pianos — piano moving crew app (daily move board, live ETA texts, condition reports, change orders)",
+  "type": "module",
+  "scripts": {
+    "dev": "python3 -m http.server 8642"
+  },
+  "dependencies": {
+    "@netlify/blobs": "^8.1.0"
+  }
+}

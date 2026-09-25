@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F6F4EE">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="BLP Movers">
+<title>BLP Movers — Brigham Larson Pianos</title>
+<link rel="icon" href="assets/blp-logo.png">
+<link rel="apple-touch-icon" href="assets/blp-logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap">
+<link rel="stylesheet" href="styles.css?v=1">
+</head>
+<body>
+
+<div id="gate" hidden>
+  <div class="gatecard">
+    <img src="assets/blp-logo.png" alt="Brigham Larson Pianos">
+    <h1>BLP Movers</h1>
+    <p class="lite">Pick your name so reports and texts carry it.</p>
+    <label class="fld">Your name<input id="gateName" type="text" autocomplete="name" placeholder="First Last" maxlength="40"></label>
+    <label class="fld">Team key<input id="gatePin" type="password" autocomplete="off" placeholder="the BLP app key" maxlength="40"></label>
+    <button class="btn primary" id="gateGo">Start the day</button>
+    <div class="msg" id="gateMsg"></div>
+  </div>
+</div>
+
+<header class="bar">
+  <img class="logo" src="assets/blp-logo.png" alt="Brigham Larson Pianos" id="logoHome">
+  <div class="barsp"></div>
+  <button class="iconbtn" id="refreshBtn" title="Refresh moves">↻</button>
+  <button class="iconbtn bulb" id="suggestBtn" title="Suggest an improvement — bugs, edits, ideas">💡</button>
+  <button class="iconbtn" id="menuBtn" aria-label="Menu">☰</button>
+</header>
+
+<div class="share" id="shareBar" hidden>
+  <span class="dot"></span>
+  <span class="sharetxt" id="shareTxt">Sharing live ETA</span>
+  <button class="mini" id="shareArrived">Arrived</button>
+  <button class="mini ghost" id="shareStop">Stop</button>
+</div>
+
+<main id="main" class="main"></main>
+
+<nav class="tabs" id="tabs">
+  <a href="#today" data-tab="today"><i>▤</i>Today</a>
+  <a href="#clock" data-tab="clock"><i>◔</i>Clock</a>
+  <a href="#upsell" data-tab="upsell"><i>✦</i>Upsell</a>
+  <a href="#more" data-tab="more"><i>⋯</i>More</a>
+</nav>
+
+<div class="scrim" id="scrim"></div>
+<nav class="drawer" id="drawer">
+  <div class="dhead"><b id="drawerWho">—</b><small id="drawerRole">mover</small></div>
+  <a href="#today">▤ Today's moves</a>
+  <a href="#week">▦ This week</a>
+  <a href="#history">✎ My reports</a>
+  <a href="#upsell">✦ Upsell ideas</a>
+  <a href="#checklist">☐ Truck checklist</a>
+  <a href="#clock">◔ Clock in / out</a>
+  <a href="#more">⋯ More &amp; roadmap</a>
+  <div class="dsec">BLP apps</div>
+  <a href="https://blpstoremap.netlify.app/" target="_blank" rel="noopener">🗺 Store Map</a>
+  <a href="https://pianologapp.netlify.app/" target="_blank" rel="noopener">🎹 Piano Log</a>
+  <a href="https://blpshop.netlify.app/" target="_blank" rel="noopener">🔧 Shop App</a>
+  <a href="https://blpcrm.netlify.app/" target="_blank" rel="noopener">📇 CRM</a>
+  <div class="dfoot"><button class="link" id="signOut">Switch name</button><span id="verTag">v0.1</span></div>
+</nav>
+
+<div class="sheet" id="sheet" hidden><div class="sheetbox" id="sheetBox"></div></div>
+<div class="toast" id="toast" hidden></div>
+
+<script src="config.js?v=1"></script>
+<script src="app.js?v=1"></script>
+</body>
+</html>

@@ -1,0 +1,42 @@
+{
+  "demo": true,
+  "note": "Example day used when no Movers bridge URL is configured. Same shape the bridge returns from the pianomoving.blp Google Calendar.",
+  "events": [
+    {
+      "id": "demo-1",
+      "date": "TODAY",
+      "time": "08:30",
+      "end": "10:00",
+      "title": "x Tanner/Jace: Deliver Yamaha U1 to Hendricks SN 2245811",
+      "location": "1487 E Cedar Hollow Dr, Lehi, UT 84043",
+      "description": "Customer: Amy Hendricks\nPhone: (801) 555-0142\nPiano: Yamaha U1 upright, polished ebony, SN 2245811\nFrom: BLP Showroom, 1497 S State St, Orem\nTo: 1487 E Cedar Hollow Dr, Lehi\nStairs: none — ground floor, 2 porch steps\nBench: yes (matching)\nPaid in full. Gate code 4471. Dog in the yard, friendly."
+    },
+    {
+      "id": "demo-2",
+      "date": "TODAY",
+      "time": "11:00",
+      "end": "13:30",
+      "title": "Tanner/Jace: Pickup Baldwin grand from Petersen → deliver Springville",
+      "location": "918 W 400 N, Springville, UT 84663",
+      "description": "Customer: Dave Petersen\nPhone: 801-555-0187\nPiano: Baldwin 5'2\" baby grand, satin walnut, SN 118904\nFrom: 2210 N Canyon Rd, Provo, UT 84604\nTo: 918 W 400 N, Springville, UT 84663\nStairs: 14 stairs up, one full flight to the front door at delivery. Straight run, wide landing.\nBench: no\nLegs and lyre off for the move. Customer wants it against the north wall, away from the fireplace.\nQuoted $495. Collect balance $245 at delivery."
+    },
+    {
+      "id": "demo-3",
+      "date": "TODAY",
+      "time": "14:00",
+      "end": "15:30",
+      "title": "Tanner/Jace: Pickup Kawai K-300 from Whitlock (trade-in) to BLP",
+      "location": "3390 N 1200 W, Pleasant Grove, UT 84062",
+      "description": "Customer: Whitlock\nPhone: 385-555-0119\nPiano: Kawai K-300 upright, ebony, SN F090221\nFrom: 3390 N 1200 W, Pleasant Grove\nTo: BLP Showroom, 1497 S State St, Orem\nStairs: 6 stairs down — split level entry, tight turn at the landing\nBench: yes\nTrade-in toward a Hailun grand. Take extra photos of the finish for the sales team."
+    },
+    {
+      "id": "demo-4",
+      "date": "TOMORROW",
+      "time": "09:00",
+      "end": "10:30",
+      "title": "Tanner/Jace: Deliver Hailun HU-121 to Nguyen",
+      "location": "742 S 1600 E, Spanish Fork, UT 84660",
+      "description": "Customer: Linh Nguyen\nPhone: 801-555-0163\nPiano: Hailun HU-121 upright, ebony, SN H0182233\nFrom: BLP Showroom\nTo: 742 S 1600 E, Spanish Fork\nStairs: 3 steps up to porch\nBench: yes (adjustable artist bench)\nFirst piano for the family — two kids starting lessons. Great tuning + Conservatory upsell."
+    }
+  ]
+}

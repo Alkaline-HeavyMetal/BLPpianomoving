@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F6F4EE">
+<title>Your piano is on the way — Brigham Larson Pianos</title>
+<link rel="icon" href="assets/blp-logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=Playfair+Display:ital,wght@0,700;1,600&display=swap">
+<style>
+:root{--paper:#F6F4EE;--ink:#151515;--mut:#6B6760;--line:#CFCBC0;--red:#8B1E1E;--good:#2E7D4F;color-scheme:light}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{font-family:'Open Sans','Helvetica Neue',Arial,sans-serif;background:var(--paper);color:var(--ink);display:flex;flex-direction:column}
+.bar{display:flex;align-items:center;justify-content:center;padding:calc(10px + env(safe-area-inset-top,0px)) 16px 10px;border-bottom:2px solid var(--ink);background:var(--paper)}
+.bar img{height:38px}
+#map{flex:1;min-height:46vh;background:#E9E5DA;position:relative}
+#fallback{position:absolute;inset:0;display:none;flex-direction:column;justify-content:center;padding:24px}
+#fallback.show{display:flex}
+.road{position:relative;height:6px;background:var(--line);border-radius:3px;margin:40px 0}
+.road .truck{position:absolute;top:-26px;left:0;width:56px;transform:translateX(-50%);transition:left 1s linear}
+.road .house{position:absolute;right:-8px;top:-20px;font-size:26px}
+.road .start{position:absolute;left:-4px;top:-20px;font-size:22px}
+.panel{background:#fff;border-top:1px solid var(--line);padding:18px 20px calc(22px + env(safe-area-inset-bottom,0px));display:grid;gap:10px}
+.eta{font-family:'Playfair Display',Georgia,serif;font-size:34px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.eta small{display:block;font-family:'Open Sans',sans-serif;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut);font-weight:700;margin-bottom:8px}
+.stage{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:4px}
+.stage div{font-size:11px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;color:var(--mut);padding-top:8px;border-top:3px solid var(--line)}
+.stage div.on{color:var(--ink);border-top-color:var(--red)}
+.stage div.done{color:var(--good);border-top-color:var(--good)}
+.lite{color:var(--mut);font-size:13.5px}
+.name{font-family:'Playfair Display',Georgia,serif;font-size:19px;font-weight:700}
+.row{display:flex;gap:10px;align-items:baseline;justify-content:space-between;flex-wrap:wrap}
+.call{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1.5px solid var(--ink);border-radius:999px;padding:11px 18px;text-decoration:none;font-weight:700;font-size:14px;color:var(--ink);background:#fff}
+.tip{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:13px}
+.tip b{display:block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--red);margin-bottom:3px}
+.msg{text-align:center;padding:60px 24px;font-family:'Playfair Display',Georgia,serif;font-style:italic;font-size:18px;color:var(--mut)}
+</style>
+</head>
+<body>
+<div class="bar"><img src="assets/blp-logo.png" alt="Brigham Larson Pianos"></div>
+<div id="map">
+  <div id="fallback">
+    <div class="road"><span class="start">🏬</span><img class="truck" id="fbTruck" alt="BLP truck"><span class="house">🏠</span></div>
+    <p class="lite" style="text-align:center" id="fbNote">Your movers are on the road.</p>
+  </div>
+</div>
+<div class="panel" id="panel">
+  <div class="eta" id="eta"><small>Your movers are</small>on the way</div>
+  <div class="stage" id="stages"><div class="on">On the way</div><div>Arriving</div><div>Arrived</div></div>
+  <div class="row"><div><div class="name" id="who">Brigham Larson Pianos movers</div><div class="lite" id="dest"></div></div><a class="call" id="callShop" href="#">Call the shop</a></div>
+  <div class="tip" id="tip"><b>While you wait</b>Please clear a 4-foot path from the door to the piano's spot, and keep pets in another room. Thank you!</div>
+</div>
+<script src="config.js"></script>
+<script src="track.js"></script>
+</body>
+</html>
