@@ -5,7 +5,7 @@
 //   GET  ?key=&kind=&who=      -> newest 100 of that kind (optionally by who)
 import { json, readJson, keyOk, store, token, CORS } from './_lib.mjs';
 
-const KINDS = ['report', 'change', 'upsell', 'clock'];
+const KINDS = ['report', 'change', 'upsell', 'clock', 'clockfix'];
 export default async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
   const s = store();

@@ -40,3 +40,8 @@
   from = "/api/offer"
   to = "/.netlify/functions/offer"
   status = 200
+
+[[redirects]]
+  from = "/api/schedule"
+  to = "/.netlify/functions/schedule"
+  status = 200

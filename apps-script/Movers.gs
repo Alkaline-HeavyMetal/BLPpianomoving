@@ -15,6 +15,7 @@
  *                     (default: a "BLP Moves" folder created in My Drive)
  *   LOG_SHEET_ID      spreadsheet for Condition Reports / Change Orders /
  *                     Service Interest tabs (default: "BLP Movers Log" created)
+ *   SCHEDULE_ALERT_EMAIL  where schedule changes are emailed (default info@brighamlarsonpianos.com)
  *   OFFICE_NAMES      comma list of teammates to text on change orders,
  *                     e.g. "Melissa,Karmel" (texts go through the Sales App's
  *                     request-notify, same as the Store Map bridge)
@@ -59,6 +60,9 @@ function doPost(e) {
       case 'changeorder': return json_(changeOrder_(req));
       case 'upsell': return json_(upsell_(req));
       case 'markdone': return json_(markDone_(req));
+      case 'schedule': return json_(schedule_(req));
+      case 'clock': return json_(clock_(req));
+      case 'clockfix': return json_(clockFix_(req));
       default: return json_({ error: 'unknown action' });
     }
   } catch (err) { return json_({ error: String(err).slice(0, 300) }); }
@@ -248,4 +252,31 @@ function notifyOffice_(msg) {
     } catch (x) {}
   });
   return n;
+}
+
+/* ---------- mover schedule: sheet row + email info@ + text the office ---------- */
+function schedule_(req) {
+  var sh = sheet_('Mover Schedules', ['At', 'Mover', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Time off', 'Summary']);
+  var w = (req.schedule && req.schedule.week) || {};
+  var to = ((req.schedule && req.schedule.timeOff) || []).map(function (t) { return t.from + (t.to && t.to !== t.from ? '→' + t.to : '') + (t.note ? ' (' + t.note + ')' : ''); }).join(', ');
+  sh.appendRow([new Date().toISOString(), req.who || '', w.Mon || '', w.Tue || '', w.Wed || '', w.Thu || '', w.Fri || '', w.Sat || '', w.Sun || '', to, req.summary || '']);
+  var subject = '📅 Mover schedule changed — ' + (req.who || 'mover');
+  var body = (req.who || 'A mover') + ' updated their schedule in the BLP Movers app.\n\n' + (req.summary || '') + '\n\nFull history: ' + sheet_('Mover Schedules', []).getParent().getUrl();
+  try { MailApp.sendEmail({ to: prop_('SCHEDULE_ALERT_EMAIL', 'info@brighamlarsonpianos.com'), subject: subject, body: body }); } catch (e) {}
+  var texted = notifyOffice_(subject + ': ' + String(req.summary || '').slice(0, 400));
+  return { ok: true, texted: texted };
+}
+/* ---------- time clock punches (interim: logged to the Movers Log until the Store Map Work Clock is wired) ---------- */
+function clock_(req) {
+  var p = req.punch || {};
+  var sh = sheet_('Clock Punches', ['At', 'Mover', 'Punch', 'Serial', 'Minutes']);
+  sh.appendRow([new Date(p.at || Date.now()).toISOString(), req.who || '', p.action || '', p.serial || '', p.minutes || '']);
+  return { ok: true };
+}
+function clockFix_(req) {
+  var f = req.fix || {};
+  var sh = sheet_('Clock Fix Requests', ['At', 'Mover', 'Punch was', 'Action', 'Should be', 'Note', 'Status']);
+  sh.appendRow([new Date().toISOString(), req.who || '', f.was ? new Date(f.was).toISOString() : '', f.action || '', f.shouldBe || '', f.note || '', 'Requested']);
+  notifyOffice_('🕒 Clock fix request from ' + (req.who || 'mover') + ': ' + (f.action || '') + ' ' + (f.was ? new Date(f.was).toLocaleString('en-US', { timeZone: 'America/Denver' }) : '') + ' → ' + (f.shouldBe || '?') + (f.note ? ' — ' + f.note : ''));
+  return { ok: true };
 }

@@ -359,3 +359,42 @@ details.raw pre{white-space:pre-wrap;font:inherit;padding:8px 0}
 .sheetx{position:absolute;top:10px;right:12px;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:#fff;color:var(--ink);font-size:15px;font-weight:700;display:grid;place-items:center;z-index:2}
 .sheetx:active{background:var(--line-soft)}
 .sheetbox h3{padding-right:44px}
+
+/* ---------- mover dashboard ---------- */
+.dgrid{display:grid;gap:14px}
+.dcard h2{padding:0 0 8px;margin-bottom:10px;font-size:19px}
+.dcard .h3{font-family:var(--serif);font-size:15px;margin:14px 0 6px}
+.dcard .h3 small,.dcard h2 small{font-family:var(--sans);font-weight:600;font-size:11.5px;color:var(--mut);margin-left:6px}
+.big{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.big em{font-style:normal;font-family:var(--serif);font-size:40px;font-weight:700;color:var(--good);line-height:1;font-variant-numeric:tabular-nums}
+.big span{font-size:12.5px;color:var(--mut)}
+.tally{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.tally div{border-top:1px solid var(--line);padding-top:8px}
+.tally b{display:block;font-family:var(--serif);font-size:20px;font-variant-numeric:tabular-nums}
+.tally span{font-size:12px;color:var(--mut)}
+.clockrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.clockstate{flex:1;min-width:140px;display:grid}
+.clockstate b{font-family:var(--serif);font-size:18px}
+.clockstate.on b{color:var(--good)}
+.clockstate small{color:var(--mut);font-size:12px}
+.serialin{flex:1;min-width:140px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:16px;min-height:var(--tap);background:#fff}
+.pianoclock{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--good-bg);border:1px solid #BFD9C8;border-radius:10px;padding:10px 12px}
+.pianoclock b{font-family:var(--serif);font-size:17px}.pianoclock span{flex:1;font-size:12.5px;color:var(--mut)}
+.week7{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.dayc{display:grid;gap:3px;text-align:center;font-size:10.5px;font-weight:700;color:var(--mut);letter-spacing:.04em}
+.dayc select{font-size:11px;padding:6px 2px;border:1px solid var(--line);border-radius:8px;background:#fff;width:100%;text-align:center}
+.tolist{display:grid;gap:4px;font-size:13.5px}
+.link.red{color:var(--red);font-size:12px}
+.offers{display:grid;gap:8px}
+.offer{display:flex;gap:10px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:#fff}
+.offer .oc{flex:1;min-width:0;display:grid}
+.offer .oc b{font-family:var(--serif);font-size:16px}.offer .oc span{font-size:13px}.offer .oc small{font-size:11.5px;color:var(--mut)}
+.offer .ob{text-align:right;display:grid}
+.offer .ob em{font-style:normal;font-weight:800;font-variant-numeric:tabular-nums;font-size:16px}.offer .ob span{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;color:var(--mut)}
+.offer.won{background:var(--good-bg);border-color:#8FC4A3;box-shadow:0 0 0 2px #CFE8D8}
+.offer.won .ob em,.offer.won .ob span{color:var(--good)}
+.offer.lost{opacity:.55}
+.punches{width:100%;border-collapse:collapse;font-size:13px}
+.punches th{text-align:left;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);padding:4px 6px 6px;border-bottom:1px solid var(--ink)}
+.punches td{padding:8px 6px;border-bottom:1px solid var(--line-soft);font-variant-numeric:tabular-nums}
+@media (min-width:900px){.dgrid{grid-template-columns:1fr 1fr 1fr}.dcard.wide{grid-column:1/-1}.big em{font-size:48px}}
