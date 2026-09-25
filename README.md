@@ -22,7 +22,7 @@ Text ETA button and the stairs warning.
 | Condition report | card → Condition report | photos downscaled and posted to the bridge → the move's Drive folder (`BLP Moves/<year>/<date — customer — piano>`) with `move-details.txt` (the calendar details), a report `.txt` + `.json`, the signature, and a row on the **Condition Reports** sheet; big videos go straight to Drive through a resumable session; the folder link is appended to the calendar event |
 | Bench yes/no, accessories, actual stairs, per-area condition, works-checks, signature | condition report | |
 | Move differs → change order | card → $ Move differs | priced add-ons with quantities, reason, customer signature → **Change Orders** sheet, calendar note, office texted |
-| Upsell ideas + interest logging | Upsell tab | **Upsell Leads** sheet; a "yes" texts the office |
+| Piano care & services guide + interest logging | Services tab | **Service Interest** sheet; a "yes" texts the office |
 | Truck checklist, week view, my reports | drawer | |
 | Clock in / out | Clock tab | placeholder (local only) until it is wired to the BLP Work Clock |
 | 💡 Suggest an improvement | top bar | Store Map bridge `action:'suggest'`, app "BLP Movers" → Store Map → Admin → App Requests (same fix list as every BLP app; Brigham logs shipped items on App Updates) |

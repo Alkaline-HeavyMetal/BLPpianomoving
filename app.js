@@ -230,7 +230,7 @@ async function route() {
     case 'details': return renderDetails(m);
     case 'report': return renderReport(m);
     case 'change': return renderChange(m);
-    case 'upsell': return renderUpsell(arg ? decodeURIComponent(arg) : '');
+    case 'services': case 'upsell': return renderUpsell(arg ? decodeURIComponent(arg) : '');
     case 'checklist': return renderChecklist();
     case 'history': return renderHistory();
     case 'clock': return renderClock();
@@ -396,7 +396,7 @@ function renderDetails(m) {
       <a class="btn nav" href="${m.nav ? mapsUrl(m.nav) : '#'}" target="_blank" rel="noopener">${pinIcon()} Navigate</a>
       <button class="btn" id="cpAddr">Copy address</button>
     </div>
-    <div class="mlinks"><a href="#report/${id}">✎ Condition report</a><a href="#change/${id}">$ Move differs</a><a href="#upsell/${encodeURIComponent(m.type || '')}">✦ Upsell tips${m.type ? ' for a ' + esc(m.type.toLowerCase()) : ''}</a></div>
+    <div class="mlinks"><a href="#report/${id}">✎ Condition report</a><a href="#change/${id}">$ Move differs</a><a href="#services/${encodeURIComponent(m.type || '')}">✦ Care & services${m.type ? ' for a ' + esc(m.type.toLowerCase()) : ''}</a></div>
     ${prepList(m)}
     <details class="raw" open><summary>Calendar event</summary><pre>${esc(m.title)}\n${esc(m.location)}\n\n${esc(m.description || '(no description)')}</pre></details>
     ${m.done ? '<div class="lite">Marked done on the calendar.</div>' : `<button class="btn wide" id="markDone">✓ Mark this move done on the calendar</button>`}
@@ -696,10 +696,10 @@ const UPSELLS = [
 function renderUpsell(type) {
   const list = UPSELLS.filter(u => !type || u.for.includes(type));
   $('#main').innerHTML = `<div class="page">
-    <h1>Upsell ideas${type ? ' <small class="lite">for a ' + esc(type.toLowerCase()) + '</small>' : ''}</h1>
-    <p class="lite">Notice something, mention it once, and log the interest. The office follows up — you don't have to sell.</p>
+    <h1>Piano care & services${type ? ' <small class="lite">for a ' + esc(type.toLowerCase()) + '</small>' : ''}</h1>
+    <p class="lite">Every piano needs a little care after a move. If something fits, mention it and note their interest. The office takes it from there.</p>
     <div class="ups">${list.map((u, i) => `<div class="up"><div class="when">${esc(u.when)}</div><b>${esc(u.s)}</b><p>${esc(u.why)}</p><div class="say">${esc(u.say)}</div>
-      <div class="act"><button class="btn sm" data-u="${i}" data-i="Yes — book it">Customer said yes</button><button class="btn sm" data-u="${i}" data-i="Maybe">Maybe later</button></div></div>`).join('')}</div>
+      <div class="act"><button class="btn sm" data-u="${i}" data-i="Yes — book it">They'd like this</button><button class="btn sm" data-u="${i}" data-i="Maybe">Maybe later</button></div></div>`).join('')}</div>
   </div>`;
   $$('[data-u]').forEach(b => b.onclick = () => upsellSheet(list[+b.dataset.u], b.dataset.i));
 }
@@ -707,7 +707,7 @@ function upsellSheet(u, interest) {
   const todays = S.moves.filter(m => S.day === today());
   const b = sheet(`<h3>${esc(u.s)}</h3><div class="lite">${esc(interest)}</div>
     <label class="fld">Which customer<select id="upMove">${todays.map(m => `<option value="${esc(m.id)}">${esc(m.customer)} · ${esc(m.piano)}</option>`).join('')}<option value="">Someone else</option></select></label>
-    <label class="fld">Note for the office<textarea id="upNote" placeholder="what they said, best time to call"></textarea></label>
+    <label class="fld">Note for the office<textarea id="upNote" placeholder="what they said, best time to reach them"></textarea></label>
     <button class="btn eta wide" id="upSend">Log it</button><div class="msg" id="upMsg"></div>`);
   $('#upSend', b).onclick = async () => {
     const m = S.moves.find(x => x.id === $('#upMove', b).value) || {};
@@ -717,7 +717,7 @@ function upsellSheet(u, interest) {
     try {
       if (CFG.moversBridgeUrl) { const j = await bridgePost(CFG.moversBridgeUrl, { key: KEY(), action: 'upsell', who: S.me.name, move, lead }); if (!j.ok) throw new Error(j.error); }
       await api('/api/log', { kind: 'upsell', who: S.me.name, data: { ...lead, customer: m.customer || '', piano: m.piano || '', moveId: m.id || '' } }).catch(() => {});
-      toast('Logged — nice work'); closeSheet();
+      toast('Noted — the office will follow up'); closeSheet();
     } catch (e) { setMsg('#upMsg', '✗ ' + e.message, 'err'); $('#upSend', b).disabled = false; }
   };
 }
@@ -833,7 +833,7 @@ function renderMore() {
     ['✓', 'Live ETA texts with the BLP truck on a map (Uber-style), plus late / arrived / thank-you texts'],
     ['✓', 'Condition report with photos, video, signature — filed to Drive + sheet + the calendar event'],
     ['✓', 'Change orders with customer signature; office texted instantly'],
-    ['✓', 'Upsell ideas and interest logging; truck checklist; week view'],
+    ['✓', 'Piano care & services guide with interest logging; truck checklist; week and month calendars'],
     ['✓', '💡 suggestions go to the Store Map\'s App Requests list'],
     ['soon', 'Clock in / out wired to the BLP Work Clock (and mileage per move for job costing)'],
     ['soon', 'Google sign-in like the Store Map instead of name + key'],

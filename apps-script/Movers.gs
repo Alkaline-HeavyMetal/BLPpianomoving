@@ -14,7 +14,7 @@
  *   DRIVE_ROOT_ID     folder id where move folders are created
  *                     (default: a "BLP Moves" folder created in My Drive)
  *   LOG_SHEET_ID      spreadsheet for Condition Reports / Change Orders /
- *                     Upsell Leads tabs (default: "BLP Movers Log" created)
+ *                     Service Interest tabs (default: "BLP Movers Log" created)
  *   OFFICE_NAMES      comma list of teammates to text on change orders,
  *                     e.g. "Melissa,Karmel" (texts go through the Sales App's
  *                     request-notify, same as the Store Map bridge)
@@ -29,7 +29,7 @@
  *   videosession  resumable Drive upload for a large video: returns
  *                 {sessionUrl}; the browser PUTs the file straight to Google
  *   changeorder   appends a Change Orders row + texts the office
- *   upsell        appends an Upsell Leads row
+ *   upsell        appends a Service Interest row (care & services the customer wanted)
  *   markdone      prefixes the calendar event title with "x " (Store Map's
  *                 done convention) and notes who/when in the description
  */
@@ -227,9 +227,9 @@ function changeOrder_(req) {
 }
 function upsell_(req) {
   var m = req.move || {}, u = req.lead || {};
-  var sh = sheet_('Upsell Leads', ['At', 'Date', 'Customer', 'Phone', 'Piano', 'Service', 'Interest', 'Note', 'Mover', 'Event']);
+  var sh = sheet_('Service Interest', ['At', 'Date', 'Customer', 'Phone', 'Piano', 'Service', 'Interest', 'Note', 'Mover', 'Event']);
   sh.appendRow([new Date().toISOString(), m.date || '', m.customer || '', m.phone || '', m.piano || '', u.service || '', u.interest || '', u.note || '', req.who || '', m.eventId || '']);
-  if (u.interest === 'Yes — book it') notifyOffice_('✦ Upsell YES — ' + (m.customer || 'customer') + ' wants ' + (u.service || 'a service') + '. ' + (u.note || '') + ' — ' + (req.who || 'mover') + (m.phone ? ' · ' + m.phone : ''));
+  if (u.interest === 'Yes — book it') notifyOffice_('✦ Service interest YES — ' + (m.customer || 'customer') + ' wants ' + (u.service || 'a service') + '. ' + (u.note || '') + ' — ' + (req.who || 'mover') + (m.phone ? ' · ' + m.phone : ''));
   return { ok: true };
 }
 // Texts teammates by first name through the Sales App's request-notify —
