@@ -16,7 +16,7 @@ const ls = {
   del(k) { try { localStorage.removeItem(k); } catch (e) {} },
   json(k) { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } },
 };
-const S = { day: today(), moves: [], loadedDay: '', demo: false, me: null, share: ls.json('blpShare'), cfg: {}, watchId: null, lastPost: 0 };
+const S = { day: today(), moves: [], loadedDay: '', demo: false, me: null, share: ls.json('blpShare'), cfg: {}, watchId: null, lastPost: 0, all: {}, range: {} };
 
 /* ===================== dates ===================== */
 function today() { return new Date().toLocaleDateString('en-CA', { timeZone: TZ }); }
@@ -109,15 +109,24 @@ async function fetchEvents(from, to) {
   return (j.events || []).map(e => ({ ...e, date: e.date === 'TODAY' ? t : e.date === 'TOMORROW' ? addDays(t, 1) : e.date }))
     .filter(e => e.date >= from && e.date <= to);
 }
+async function fetchRange(from, to) {
+  const k = from + '|' + to, hit = S.range[k];
+  if (hit && Date.now() - hit.at < 120000) return hit.moves;
+  const moves = (await fetchEvents(from, to)).map(parseMove);
+  moves.forEach(m => { S.all[m.id] = m; });
+  S.range[k] = { at: Date.now(), moves };
+  return moves;
+}
 async function loadMoves(day, quiet) {
   try {
     const evs = await fetchEvents(day, day);
     S.moves = evs.map(parseMove).sort((a, b) => (a.time || '99').localeCompare(b.time || '99'));
+    S.moves.forEach(m => { S.all[m.id] = m; });
     S.loadedDay = day;
     ls.set('blpMoves:' + day, JSON.stringify(evs));
   } catch (e) {
     const cached = ls.json('blpMoves:' + day);
-    if (cached) { S.moves = cached.map(parseMove); S.loadedDay = day; if (!quiet) toast('Offline — showing the last loaded moves', true); }
+    if (cached) { S.moves = cached.map(parseMove); S.moves.forEach(m => { S.all[m.id] = m; }); S.loadedDay = day; if (!quiet) toast('Offline — showing the last loaded moves', true); }
     else { S.moves = []; S.loadedDay = day; if (!quiet) toast('Could not load moves: ' + e.message, true); }
   }
 }
@@ -184,9 +193,8 @@ function parseMove(ev) {
   const gate = ((all.match(/gate(?: code)?\s*[:#]?\s*(\d{3,8})/i) || [])[1] || '');
   const price = ((all.match(/\$\s?\d[\d,]*(?:\.\d\d)?/) || [])[0] || '');
   const balance = ((desc.match(/(?:collect|balance|due|owe)[^$\n]*(\$\s?\d[\d,]*(?:\.\d\d)?)/i) || [])[1] || '');
-  const prep = /legs?\s*(?:and|&)\s*lyre|lyre/i.test(all) ? 'Legs & lyre off' : '';
   return { id: ev.id || (ev.date + '-' + (ev.time || '') + '-' + customer), eventId: ev.id || '', date: ev.date, time: ev.time, end: ev.end, title, rest, description: desc, location: loc,
-    done, crew, customer, phone, piano: piano || type || 'Piano', serial, type, from, to, kind, nav, stairs, bench, benchNote, gate, price, balance, prep, color: ev.color || '' };
+    done, crew, customer, phone, piano: piano || type || 'Piano', serial, type, from, to, kind, nav, stairs, bench, benchNote, gate, price, balance, color: ev.color || '' };
 }
 function stairsLabel(m) {
   const s = m.stairs;
@@ -206,16 +214,19 @@ async function route() {
   openDrawer(false); closeSheet();
   const [view, arg] = location.hash.replace(/^#\/?/, '').split('/');
   const v = view || 'today';
-  $$('#tabs a').forEach(a => a.classList.toggle('on', a.dataset.tab === v || (v === 'week' && a.dataset.tab === 'today')));
+  $$('#tabs a').forEach(a => a.classList.toggle('on', a.dataset.tab === v || ((v === 'week' || v === 'month') && a.dataset.tab === 'today')));
   const main = $('#main');
   window.scrollTo(0, 0);
   const need = { today: 1, details: 1, report: 1, change: 1 }[v];
-  if (need && S.loadedDay !== S.day) { main.innerHTML = '<div class="empty">Loading moves…</div>'; await loadMoves(S.day, true); }
-  const m = arg ? S.moves.find(x => x.id === decodeURIComponent(arg)) : null;
-  if (arg && need && v !== 'today' && !m) { location.hash = '#today'; return; }
+  const id = arg ? decodeURIComponent(arg) : '';
+  let m = id ? S.all[id] : null;
+  if (v === 'today' && S.loadedDay !== S.day) { main.innerHTML = '<div class="empty">Loading moves…</div>'; await loadMoves(S.day, true); }
+  if (need && v !== 'today' && id && !m) { await loadMoves(S.day, true); m = S.all[id]; }
+  if (need && v !== 'today' && !m) { location.hash = '#today'; return; }
   switch (v) {
     case 'today': return renderToday();
     case 'week': return renderWeek();
+    case 'month': return renderMonth();
     case 'details': return renderDetails(m);
     case 'report': return renderReport(m);
     case 'change': return renderChange(m);
@@ -242,8 +253,9 @@ function renderToday() {
     <div class="dayhead">
       <div><h1>${d === today() ? 'Today, ' : ''}${esc(fmtDay(d))}</h1>
         <div class="sub">${moves.length ? `${moves.length} move${moves.length === 1 ? '' : 's'}${open !== moves.length ? ` · ${open} to go` : ''} · ${flights ? flights + ' with a flight of stairs' : 'no flights of stairs'}${crew ? ' · ' + esc(crew) : ''}` : 'Nothing on the moving calendar'}</div></div>
-      <div class="daynav"><button id="dPrev" aria-label="Previous day">‹</button><button id="dNext" aria-label="Next day">›</button></div>
+      <div class="daynav"><button id="dPrev" aria-label="Previous day"><span>‹</span></button><button id="dNext" aria-label="Next day"><span>›</span></button></div>
     </div>
+    ${viewSwitch('day')}
     ${S.demo ? '<div class="demo"><b>Example day.</b> Connect the Movers bridge in config.js and this board fills from the pianomoving.blp calendar.</div>' : ''}
     <div class="moves">${moves.length ? moves.map(m => moveCard(m, m.id === nextId)).join('') : '<div class="empty">No moves scheduled. Enjoy the quiet, or check the week.</div>'}</div>
     ${moves.filter(m => !m.done).length > 1 ? `<div style="padding:16px 0"><a class="btn wide sm" target="_blank" rel="noopener" href="${routeDayUrl(moves)}">${pinIcon()} Route my whole day in Google Maps</a></div>` : ''}`;
@@ -264,7 +276,6 @@ function moveCard(m, isNext) {
   if (sl) chips.push(`<span class="chip warn">${stairsIcon()}${esc(sl)}</span>`);
   else if (m.stairs.none) chips.push('<span class="chip good">No stairs</span>');
   if (m.bench) chips.push(`<span class="chip">${m.bench === 'yes' ? 'Bench' : 'No bench'}${m.benchNote && m.bench === 'yes' ? ' · ' + esc(m.benchNote.slice(0, 18)) : ''}</span>`);
-  if (m.prep) chips.push(`<span class="chip">${esc(m.prep)}</span>`);
   if (m.gate) chips.push(`<span class="chip">Gate ${esc(m.gate)}</span>`);
   if (m.balance) chips.push(`<span class="chip warn" style="background:#3A3835;border-color:#3A3835">Collect ${esc(m.balance)}</span>`);
   if (m.kind === 'in-store') chips.push('<span class="chip soft">In-store</span>');
@@ -712,18 +723,84 @@ function upsellSheet(u, interest) {
 }
 
 /* ===================== WEEK / HISTORY / CHECKLIST / CLOCK / MORE ===================== */
+function viewSwitch(on) {
+  return `<div class="vswitch">${[['day', 'Day', '#today'], ['week', 'Week', '#week'], ['month', 'Month', '#month']].map(([k, l, h]) => `<a href="${h}" class="${on === k ? 'on' : ''}">${l}</a>`).join('')}${on !== 'day' ? `<button type="button" class="vtoday" id="vToday">Today</button>` : ''}</div>`;
+}
+function weekStart(d) { const x = new Date(d + 'T12:00:00'); x.setDate(x.getDate() - x.getDay()); return x.toLocaleDateString('en-CA'); }
+const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const H0 = 7, H1 = 20, HPX = 44;   // 7 AM – 8 PM, 44px per hour
+function mins(t) { const [h, m] = t.split(':').map(Number); return h * 60 + m; }
+function evBlock(m, showTime) {
+  const top = Math.max(0, (mins(m.time) - H0 * 60) / 60 * HPX);
+  const dur = m.end ? Math.max(30, mins(m.end) - mins(m.time)) : 90;
+  const h = Math.max(22, dur / 60 * HPX - 2);
+  const last = m.customer.split(/\s+/).pop();
+  return `<a class="ev ${m.done ? 'done' : ''} ${m.stairs.warn ? 'flight' : ''}" href="#details/${encodeURIComponent(m.id)}" style="top:${top}px;height:${h}px" title="${esc(m.time + ' ' + m.customer + ' · ' + m.piano)}">
+    ${showTime ? `<b>${esc(m.time)}</b> ` : ''}${esc(last)}${m.stairs.warn ? ' <i>▲</i>' : ''}</a>`;
+}
 async function renderWeek() {
-  const main = $('#main'); main.innerHTML = '<div class="empty">Loading the week…</div>';
-  const from = today(), to = addDays(from, 7);
-  let evs = [];
-  try { evs = await fetchEvents(from, to); } catch (e) { main.innerHTML = '<div class="empty">Could not load: ' + esc(e.message) + '</div>'; return; }
-  const byDay = {};
-  evs.map(parseMove).forEach(m => (byDay[m.date] = byDay[m.date] || []).push(m));
-  const days = []; for (let i = 0; i <= 7; i++) days.push(addDays(from, i));
-  main.innerHTML = `<div class="page"><h1>This week</h1>${days.map(d => { const ms = (byDay[d] || []).sort((a, b) => (a.time || '99').localeCompare(b.time || '99')); return `<h2>${d === from ? 'Today · ' : ''}${esc(fmtShort(d))} <small>${ms.length ? ms.length + ' move' + (ms.length === 1 ? '' : 's') : 'free'}</small></h2>
-    ${ms.map(m => `<div class="rowk" style="padding:4px 0"><b class="num" style="text-transform:none;letter-spacing:0;font-size:13px;color:var(--ink)">${m.time ? esc(m.time) : 'all day'}</b><span>${esc(m.customer)} · ${esc(m.piano)}${stairsLabel(m) ? ` <span class="chip warn" style="padding:1px 7px;font-size:10px">${esc(stairsLabel(m))}</span>` : ''}</span></div>`).join('')}`; }).join('')}
-    <button class="btn wide sm" id="wkGo">Open a day on the board</button></div>`;
-  $('#wkGo').onclick = () => { S.day = today(); location.hash = '#today'; };
+  const main = $('#main');
+  const ws = weekStart(S.day), we = addDays(ws, 6);
+  main.innerHTML = `<div class="page"><div class="dayhead"><div><h1>${esc(fmtShort(ws))} – ${esc(fmtShort(we))}</h1><div class="sub">Loading the week…</div></div></div>${viewSwitch('week')}</div>`;
+  let moves = [];
+  try { moves = await fetchRange(ws, we); } catch (e) { main.querySelector('.sub').textContent = 'Could not load: ' + e.message; return; }
+  const days = []; for (let i = 0; i < 7; i++) days.push(addDays(ws, i));
+  const byDay = {}; moves.forEach(m => (byDay[m.date] = byDay[m.date] || []).push(m));
+  const flights = moves.filter(m => m.stairs.warn && !m.done).length;
+  const t = today();
+  main.innerHTML = `<div class="page">
+    <div class="dayhead"><div><h1>${esc(fmtShort(ws))} – ${esc(fmtShort(we))}</h1><div class="sub">${moves.length} move${moves.length === 1 ? '' : 's'} this week${flights ? ' · ' + flights + ' with a flight of stairs' : ''}</div></div>
+      <div class="daynav"><button id="wPrev" aria-label="Previous week"><span>‹</span></button><button id="wNext" aria-label="Next week"><span>›</span></button></div></div>
+    ${viewSwitch('week')}
+    <div class="cal week">
+      <div class="whead"><div class="gut"></div>${days.map(d => `<a href="#today" data-day="${d}" class="wday ${d === t ? 'today' : ''}"><small>${DOW[new Date(d + 'T12:00:00').getDay()]}</small><b>${+d.slice(8)}</b></a>`).join('')}</div>
+      <div class="allday"><div class="gut">all day</div>${days.map(d => `<div class="adcell">${(byDay[d] || []).filter(m => !m.time).map(m => `<a class="ev ad ${m.done ? 'done' : ''}" href="#details/${encodeURIComponent(m.id)}">${esc(m.customer.split(/\s+/).pop())}</a>`).join('')}</div>`).join('')}</div>
+      <div class="wgrid" style="height:${(H1 - H0) * HPX}px">
+        <div class="gut">${Array.from({ length: H1 - H0 }, (_, i) => `<div class="hr" style="top:${i * HPX}px">${((H0 + i + 11) % 12) + 1}${H0 + i < 12 ? 'a' : 'p'}</div>`).join('')}</div>
+        ${days.map(d => `<div class="wcol ${d === t ? 'today' : ''}" data-day="${d}">${Array.from({ length: H1 - H0 }, (_, i) => `<div class="hline" style="top:${i * HPX}px"></div>`).join('')}${(byDay[d] || []).filter(m => m.time).map(m => evBlock(m, false)).join('')}</div>`).join('')}
+      </div>
+    </div>
+    <div class="lite">Tap a day number for that day's board, or a move to open it. ▲ marks a flight of stairs.</div>
+  </div>`;
+  $('#wPrev').onclick = () => { S.day = addDays(ws, -7); renderWeek(); };
+  $('#wNext').onclick = () => { S.day = addDays(ws, 7); renderWeek(); };
+  $('#vToday').onclick = () => { S.day = today(); renderWeek(); };
+  $$('[data-day]', main).forEach(el => { if (el.tagName === 'A') el.onclick = () => { S.day = el.dataset.day; }; else el.onclick = ev => { if (ev.target === el || ev.target.classList.contains('hline')) { S.day = el.dataset.day; location.hash = '#today'; } }; });
+  if (days.includes(t)) { const now = nowHHMM(); const y = (mins(now) - H0 * 60) / 60 * HPX; if (y > 0 && y < (H1 - H0) * HPX) $('.wcol.today', main).insertAdjacentHTML('beforeend', `<div class="nowline" style="top:${y}px"></div>`); }
+}
+async function renderMonth() {
+  const main = $('#main');
+  const first = S.day.slice(0, 8) + '01';
+  const fd = new Date(first + 'T12:00:00');
+  const gridStart = weekStart(first);
+  const lastDay = new Date(fd.getFullYear(), fd.getMonth() + 1, 0).getDate();
+  const last = S.day.slice(0, 8) + String(lastDay).padStart(2, '0');
+  const gridEnd = addDays(weekStart(last), 6);
+  const title = fd.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  main.innerHTML = `<div class="page"><div class="dayhead"><div><h1>${esc(title)}</h1><div class="sub">Loading the month…</div></div></div>${viewSwitch('month')}</div>`;
+  let moves = [];
+  try { moves = await fetchRange(gridStart, gridEnd); } catch (e) { main.querySelector('.sub').textContent = 'Could not load: ' + e.message; return; }
+  const byDay = {}; moves.forEach(m => (byDay[m.date] = byDay[m.date] || []).push(m));
+  const inMonth = moves.filter(m => m.date >= first && m.date <= last);
+  const t = today();
+  const cells = []; for (let d = gridStart; d <= gridEnd; d = addDays(d, 1)) cells.push(d);
+  main.innerHTML = `<div class="page">
+    <div class="dayhead"><div><h1>${esc(title)}</h1><div class="sub">${inMonth.length} move${inMonth.length === 1 ? '' : 's'} · ${inMonth.filter(m => m.stairs.warn).length} with a flight of stairs</div></div>
+      <div class="daynav"><button id="mPrev" aria-label="Previous month"><span>‹</span></button><button id="mNext" aria-label="Next month"><span>›</span></button></div></div>
+    ${viewSwitch('month')}
+    <div class="cal month">
+      <div class="mhead">${DOW.map(d => `<div>${d[0]}</div>`).join('')}</div>
+      <div class="mgrid">${cells.map(d => { const ms = (byDay[d] || []).sort((a, b) => (a.time || '99').localeCompare(b.time || '99')); const out = d < first || d > last; return `<div class="mcell ${out ? 'out' : ''} ${d === t ? 'today' : ''} ${ms.length ? 'has' : ''}" data-day="${d}">
+        <b>${+d.slice(8)}</b>
+        ${ms.slice(0, 3).map(m => `<span class="mev ${m.done ? 'done' : ''} ${m.stairs.warn ? 'flight' : ''}">${m.time ? esc(m.time.replace(/^0/, '')) + ' ' : ''}${esc(m.customer.split(/\s+/).pop())}</span>`).join('')}
+        ${ms.length > 3 ? `<span class="mmore">+${ms.length - 3} more</span>` : ''}</div>`; }).join('')}</div>
+    </div>
+    <div class="lite">Tap a day to open its board. Red marks a flight of stairs.</div>
+  </div>`;
+  $('#mPrev').onclick = () => { S.day = addDays(first, -1).slice(0, 8) + '01'; renderMonth(); };
+  $('#mNext').onclick = () => { S.day = addDays(last, 1); renderMonth(); };
+  $('#vToday').onclick = () => { S.day = today(); renderMonth(); };
+  $$('.mcell', main).forEach(c => c.onclick = () => { S.day = c.dataset.day; location.hash = '#today'; });
 }
 async function renderHistory() {
   const main = $('#main'); main.innerHTML = '<div class="empty">Loading…</div>';
