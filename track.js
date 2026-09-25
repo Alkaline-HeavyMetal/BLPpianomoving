@@ -101,6 +101,7 @@
       line.setPath(res.routes[0].overview_path);
       const sec = (leg.duration_in_traffic || leg.duration).value;
       setEta(Math.max(1, Math.round(sec / 60)), leg.distance.text);
+      fetch('/api/eta-report', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token: tok, etaMin: Math.round(sec / 60) }) }).catch(() => {});
       if (!fitted) fit();
     });
   }

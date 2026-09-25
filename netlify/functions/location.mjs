@@ -22,6 +22,7 @@ export default async (req) => {
     // rough fallback: straight-line miles at ~28 mph average, minimum 1 minute
     const mi = haversineMi(rec.lastLoc, rec.destLoc);
     rec.etaMin = Math.max(1, Math.round(mi / 28 * 60));
+    if (rec.etaFirst == null) { rec.etaFirst = rec.etaMin; rec.etaFirstAt = now; }
     if (mi < 0.08 && rec.status === 'enroute') rec.status = 'arrived';
   }
   if (b.status && ['enroute', 'arrived', 'ended'].includes(b.status)) {

@@ -400,3 +400,12 @@ details.raw pre{white-space:pre-wrap;font:inherit;padding:8px 0}
 @media (min-width:900px){.dgrid{grid-template-columns:1fr 1fr 1fr}.dcard.wide{grid-column:1/-1}.big em{font-size:48px}}
 .punches tr.flag td{background:var(--warn-bg)}
 .punches td.note{color:var(--mut);font-size:12px;max-width:220px}
+
+/* schedule: time-off entry box + save bar */
+.tolist{display:grid;gap:6px;margin-bottom:12px}
+.tolist div{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:baseline;font-size:13.5px;padding:8px 0;border-bottom:1px solid var(--line-soft)}
+.tolist span{color:var(--mut);font-size:12.5px}
+.tobox{display:grid;gap:12px;border:1px dashed var(--line);border-radius:12px;padding:14px;background:var(--paper);margin-top:6px}
+.toact{display:flex;justify-content:flex-end}
+.savebar{display:grid;gap:8px;margin-top:20px;padding-top:16px;border-top:1px solid var(--line)}
+.logtag{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.04em;color:var(--good);background:var(--good-bg);border-radius:6px;padding:1px 6px;vertical-align:1px}

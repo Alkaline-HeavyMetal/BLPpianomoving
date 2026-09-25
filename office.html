@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Office view — BLP Movers</title>
+<link rel="icon" href="assets/blp-logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=Playfair+Display:ital,wght@0,700;1,600&display=swap">
+<link rel="stylesheet" href="styles.css?v=12">
+<style>
+body{display:grid;grid-template-rows:auto minmax(0,1fr);height:100%}
+.office{display:grid;grid-template-columns:minmax(300px,380px) minmax(0,1fr);min-height:0}
+@media (max-width:820px){.office{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr)}}
+.trucks{overflow-y:auto;padding:14px 16px 24px;display:grid;gap:10px;align-content:start;border-right:1px solid var(--line)}
+.trucks h1{font-family:var(--serif);font-size:22px}
+.truck{border:1px solid var(--line);border-radius:12px;background:#fff;padding:12px 14px;display:grid;gap:6px;cursor:pointer}
+.truck.late{border-color:var(--red);box-shadow:inset 4px 0 0 var(--red)}
+.truck.quiet{border-color:#C9A13A;box-shadow:inset 4px 0 0 #C9A13A}
+.truck.done{opacity:.55}
+.truck b{font-family:var(--serif);font-size:17px}
+.truck .st{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;font-size:12.5px;color:var(--mut)}
+.truck .eta{font-family:var(--serif);font-size:24px;font-weight:700;font-variant-numeric:tabular-nums}
+.badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:10.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase}
+.badge.late{background:var(--red);color:#fff}.badge.quiet{background:var(--warn-bg);color:#7a5a06}.badge.ok{background:var(--good-bg);color:var(--good)}.badge.done{background:#EEE9DF;color:var(--mut)}
+#map{background:#E9E5DA;min-height:320px}
+.gatebox{padding:24px;display:grid;gap:10px;max-width:360px}
+</style>
+</head>
+<body>
+<header class="bar"><img class="logo" src="assets/blp-logo.png" alt="Brigham Larson Pianos"><div class="barsp"></div><span class="lite" id="stamp"></span><a class="iconbtn" href="index.html" title="Crew app" style="text-decoration:none">🚚</a></header>
+<div class="office" id="office" hidden>
+  <aside class="trucks" id="trucks"><h1>Trucks live</h1><div class="lite">loading…</div></aside>
+  <div id="map"></div>
+</div>
+<div class="gatebox" id="gate"><h1 class="serif" style="font-size:22px">Office view</h1><p class="lite">Every truck sharing a live ETA, on one map. Late or silent trucks are flagged and the office is texted.</p><label class="fld">Team key<input id="key" type="password"></label><button class="btn primary" id="go">Open</button><div class="msg" id="msg"></div></div>
+<script src="config.js"></script>
+<script src="office.js"></script>
+</body>
+</html>

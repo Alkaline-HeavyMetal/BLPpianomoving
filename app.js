@@ -157,7 +157,32 @@ async function fetchRange(from, to) {
   const moves = (await fetchEvents(from, to)).map(parseMove);
   moves.forEach(m => { S.all[m.id] = m; });
   S.range[k] = { at: Date.now(), moves };
+  enrichFromLog(moves);
   return moves;
+}
+/* ---- Piano Log: when the event carries a serial, take year / make / model /
+ * size / type from the log instead of guessing from the event text */
+const logCache = {};
+async function enrichFromLog(moves) {
+  const want = [...new Set(moves.filter(m => m.serial && !m.log && !(m.serial.toUpperCase() in logCache)).map(m => m.serial.toUpperCase()))];
+  if (want.length) {
+    try {
+      const j = await fetch('/api/pianolog?serials=' + encodeURIComponent(want.join(','))).then(r => r.json());
+      want.forEach(sn => { logCache[sn] = (j.found || {})[sn] || null; });
+    } catch (e) { return 0; }
+  }
+  let n = 0;
+  for (const m of moves) {
+    const rec = m.serial ? logCache[m.serial.toUpperCase()] : null;
+    if (!rec || m.log) continue;
+    m.log = rec; n++;
+    const name = [rec.year, rec.make, rec.model].filter(Boolean).join(' ');
+    const type = rec.type === 'grand' ? 'Grand' : rec.type === 'upright' ? 'Upright' : rec.type === 'digital' ? 'Digital' : m.type;
+    if (name) m.piano = name + (rec.size ? ' ' + rec.size : '') + (type ? ' ' + type.toLowerCase() : '');
+    if (type) m.type = type;
+    if (!m.bench && rec.bench) m.bench = /^(no|none|n\b)/i.test(rec.bench) ? 'no' : 'yes';
+  }
+  return n;
 }
 async function loadMoves(day, quiet) {
   try {
@@ -166,6 +191,7 @@ async function loadMoves(day, quiet) {
     S.moves.forEach(m => { S.all[m.id] = m; });
     S.loadedDay = day;
     ls.set('blpMoves:' + day, JSON.stringify(evs));
+    enrichFromLog(S.moves).then(n => { if (n && (location.hash || '#today') === '#today' && S.loadedDay === day) renderToday(); });
   } catch (e) {
     const cached = ls.json('blpMoves:' + day);
     if (cached) { S.moves = cached.map(parseMove); S.moves.forEach(m => { S.all[m.id] = m; }); S.loadedDay = day; if (!quiet) toast('Offline — showing the last loaded moves', true); }
@@ -326,7 +352,7 @@ function moveCard(m, isNext) {
   return `<article class="move ${m.done ? 'done' : ''} ${live ? 'live' : ''}" id="mv-${esc(m.id)}">
     <div class="mtime">${fmtTime(m.time)}<small class="${isNext ? 'live' : ''}">${live ? 'Sharing' : status}</small></div>
     <div class="mbody">
-      <div><div class="mname">${esc(m.customer)}</div><div class="mpiano">${esc(m.piano)}${m.serial && !m.piano.includes(m.serial) ? ' · SN ' + esc(m.serial) : ''}${m.kind === 'pickup' ? ' · pickup' : m.kind === 'delivery' ? ' · delivery' : ''}</div></div>
+      <div><div class="mname">${esc(m.customer)}</div><div class="mpiano">${esc(m.piano)}${m.serial && !m.piano.includes(m.serial) ? ' · SN ' + esc(m.serial) : ''}${m.kind === 'pickup' ? ' · pickup' : m.kind === 'delivery' ? ' · delivery' : ''}${m.log ? ' <span class="logtag" title="from the Piano Log">✓ Piano Log</span>' : ''}</div></div>
       ${m.from || m.to ? `<div class="addr">${m.from ? `<div class="a"><b>FROM</b><span>${esc(m.from)}</span></div>` : ''}${m.to ? `<div class="a"><b>TO</b><span>${esc(m.to)}</span></div>` : ''}</div>` : (m.location ? `<div class="addr"><div class="a"><b>AT</b><span>${esc(m.location)}</span></div></div>` : '')}
       ${chips.length ? `<div class="chips">${chips.join('')}</div>` : ''}
       ${m.done ? '' : `<div class="btns">
@@ -425,7 +451,8 @@ function renderDetails(m) {
     <h1>${esc(m.customer)}</h1>
     <div class="rowk">
       <b>When</b><span>${esc(fmtShort(m.date))} · ${m.time ? esc(m.time) + (m.end ? '–' + esc(m.end) : '') : 'all day'}</span>
-      <b>Piano</b><span>${esc(m.piano)}${m.serial && !m.piano.includes(m.serial) ? ' · SN ' + esc(m.serial) : ''}</span>
+      <b>Piano</b><span>${esc(m.piano)}${m.serial && !m.piano.includes(m.serial) ? ' · SN ' + esc(m.serial) : ''}${m.log ? ' <span class="logtag">✓ Piano Log</span>' : ''}</span>
+      ${m.log && (m.log.location || m.log.phase) ? `<b>In the log</b><span>${esc([m.log.phase, m.log.location && 'spot ' + m.log.location, m.log.status].filter(Boolean).join(' · '))}${m.log.importantNote ? ' · ⚠ ' + esc(m.log.importantNote) : ''}</span>` : ''}
       ${m.from ? `<b>From</b><span>${esc(m.from)}</span>` : ''}
       ${m.to ? `<b>To</b><span>${esc(m.to)}</span>` : ''}
       ${m.location && !m.from && !m.to ? `<b>Where</b><span>${esc(m.location)}</span>` : ''}
@@ -477,7 +504,7 @@ function draftKey(m, stage) { return 'blpDraft:' + m.id + ':' + stage; }
 function renderReport(m) {
   const id = encodeURIComponent(m.id);
   let R = ls.json(draftKey(m, 'any')) || {
-    stage: m.kind === 'delivery' ? 'delivery' : 'pickup', type: m.type || 'Upright', make: (m.piano.match(new RegExp('(' + MAKES + ')', 'i')) || [])[1] || '', model: '', serial: m.serial || '', finish: '',
+    stage: m.kind === 'delivery' ? 'delivery' : 'pickup', type: m.type || 'Upright', make: (m.log && m.log.make) || (m.piano.match(new RegExp('(' + MAKES + ')', 'i')) || [])[1] || '', model: (m.log && m.log.model) || '', serial: m.serial || '', finish: (m.log && /ebony|walnut|mahogany|white|ivory|cherry|oak|satin|polished|gloss/i.test(m.log.summary) ? (m.log.summary.match(/(polished|satin|high[- ]gloss)?\s*(ebony|walnut|mahogany|white|ivory|cherry|oak|black)/i) || [''])[0].trim() : '') || '',
     bench: m.bench === 'no' ? 'No' : m.bench === 'yes' ? 'Yes' : '', benchType: '', benchNote: '', accessories: [],
     stairsActual: m.stairs.count || 0, stairsDir: m.stairs.dir || (m.stairs.none ? 'none' : ''), stairsFlights: m.stairs.flights || 0, access: '',
     condition: {}, functional: {}, notes: '', customerName: m.customer, ack: false,
@@ -1012,7 +1039,7 @@ async function renderDash() {
  * and its piano clock (action clockin/clockout by serial, phase "Moving").
  * Same bridge, same payloads the Store Map dashboard sends, so payroll and
  * job costing stay in one system. */
-const SM = () => CFG.storeMapBridgeUrl;
+const SM = () => '/api/sm';
 const smUser = () => ({ name: S.me.name, email: S.me.email || '' });
 function punchGeo() {
   return new Promise(res => {
@@ -1078,12 +1105,13 @@ async function dashSchedule() {
     el.innerHTML = `<h2>My schedule <small>${sched.updatedAt ? 'updated ' + esc(new Date(sched.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })) : 'not set yet'}</small></h2>
       <div class="week7">${DAYS.map(d => `<label class="dayc"><span>${d}</span><select data-d="${d}">${SHIFTS.map(x => `<option ${sched.week[d] === x ? 'selected' : ''}>${x}</option>`).join('')}</select></label>`).join('')}</div>
       <h3 class="h3">Time off</h3>
-      ${sched.timeOff.length ? `<div class="tolist">${sched.timeOff.map((t, i) => `<div><b>${esc(t.from)}${t.to && t.to !== t.from ? ' → ' + esc(t.to) : ''}</b> ${esc(t.note || '')} <button type="button" class="link red" data-rm="${i}">remove</button></div>`).join('')}</div>` : '<div class="lite">none requested</div>'}
-      <div class="grid2"><label class="fld">From<input type="date" id="toFrom"></label><label class="fld">To<input type="date" id="toTo"></label></div>
-      <label class="fld">Reason (optional)<input id="toNote" placeholder="family trip, appointment…"></label>
-      <button class="btn sm" id="toAdd">Add time off</button>
-      <button class="btn eta wide" id="schedSave">Save schedule · alerts the office</button>
-      <div class="msg" id="schedMsg"></div>
+      ${sched.timeOff.length ? `<div class="tolist">${sched.timeOff.map((t, i) => `<div><b>${esc(fmtShort(t.from))}${t.to && t.to !== t.from ? ' → ' + esc(fmtShort(t.to)) : ''}</b><span>${esc(t.note || '')}${t.filed ? ' · sent for approval' : ''}</span><button type="button" class="link red" data-rm="${i}">remove</button></div>`).join('')}</div>` : '<div class="lite">No time off requested.</div>'}
+      <div class="tobox">
+        <div class="grid2"><label class="fld">From<input type="date" id="toFrom"></label><label class="fld">To<input type="date" id="toTo"></label></div>
+        <label class="fld">Reason (optional)<input id="toNote" placeholder="family trip, appointment…"></label>
+        <div class="toact"><button class="btn sm" id="toAdd">＋ Add time off</button></div>
+      </div>
+      <div class="savebar"><button class="btn eta wide" id="schedSave">Save schedule · alerts the office</button><div class="msg" id="schedMsg"></div></div>
       <div class="lite">Every save emails info@brighamlarsonpianos.com and texts the office that ${esc(S.me.name.split(' ')[0])}'s schedule changed. Time off also files into the Store Map's Time Off list for approval.</div>`;
     $$('select[data-d]', el).forEach(sel => sel.onchange = () => { sched.week[sel.dataset.d] = sel.value; });
     $$('[data-rm]', el).forEach(b => b.onclick = () => { sched.timeOff.splice(+b.dataset.rm, 1); paint(); });
@@ -1185,10 +1213,10 @@ function renderMore() {
     ['✓', '💡 suggestions go to the Store Map\'s App Requests list'],
     ['✓', 'Mover dashboard: the BLP Work Clock + clock into a piano by serial (Store Map Time Log), my schedule (alerts info@ and the office), payroll history with clock-fix requests, services offered with WON highlighting and the monthly bonus tally'],
     ['✓', 'Google sign-in for BLP accounts, with the team password as the fallback'],
-    ['soon', 'Office view: every truck live on one map, ETA drift alerts'],
+    ['✓', 'Office view (office.html): every truck live on one map, late and quiet-phone flags, office texted on drift'],
     ['soon', 'Customer pre-arrival text the night before (clear the path, pets, parking)'],
     ['soon', 'Spanish toggle, like the Shop App'],
-    ['soon', 'Piano Log link: pull make/model/serial straight from the log when the event has an SN'],
+    ['✓', 'Piano Log link: when the event has a serial, year / make / model / type come straight from the log and prefill the condition report'],
   ];
   $('#main').innerHTML = `<div class="page"><h1>More</h1>
     <div class="card"><div class="rowk"><b>Name</b><span>${esc(S.me.name)}</span><b>Signed in</b><span>${S.me.google ? 'Google · ' + esc(S.me.email) : 'team password'}</span><b>Calendar</b><span>${CFG.moversBridgeUrl ? 'Movers bridge connected' : 'example data (no bridge URL yet)'}</span><b>Texts</b><span>${S.cfg.smsConfigured ? 'Twilio ready' : 'phone Messages app (Twilio not set)'}</span><b>Map key</b><span>${S.cfg.mapsKey ? 'set' : 'not set — tracking page uses the simple view'}</span><b>Version</b><span>${VERSION}</span></div></div>
@@ -1228,7 +1256,7 @@ function suggestBox() {
           if (uj && uj.url) body.screenshotUrl = uj.url;
         } catch (e) { /* filed without the picture */ }
       }
-      const j = await bridgePost(CFG.storeMapBridgeUrl, body);
+      const j = await bridgePost('/api/sm', body);
       if (!j.ok || !j.id) throw new Error(j.error || 'the Google bridge hiccuped — try again in a few seconds');
       setMsg('#sgMsg', '✓ Filed as ' + j.id + ' — thank you! You\'ll see it move to Live here when it ships.', 'ok');
       $('#sgText', b).value = ''; shot = null; $('#sgShotName', b).textContent = '';
@@ -1241,7 +1269,7 @@ function suggestBox() {
 async function loadMine(b) {
   const box = $('#sgMine', b);
   try {
-    const j = await bridgeGet(CFG.storeMapBridgeUrl + '?fn=requests');
+    const j = await bridgeGet('/api/sm?fn=requests');
     const me = S.me.name.toLowerCase();
     const mine = (j.requests || []).filter(x => (x.who || '').toLowerCase() === me).slice(0, 10);
     box.innerHTML = mine.length ? '<b>My requests</b>' + mine.map(x => `<div><span class="st s${esc(String(x.status || '').replace(/\s/g, ''))}">${esc(x.status)}</span><span>${esc(String(x.text).slice(0, 140))}</span></div>`).join('') : '<div class="lite">No requests from you yet — be the first!</div>';

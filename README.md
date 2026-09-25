@@ -24,7 +24,8 @@ Text ETA button and the stairs warning.
 | Move differs → change order | card → $ Move differs | priced add-ons with quantities, reason, customer signature → **Change Orders** sheet, calendar note, office texted |
 | Customer interested → offer | card → ✦ Customer interested, or the Services tab | pick the item → the customer gets a friendly marketing text (`/api/offer`, Twilio), a **New Lead opens in the BLP Sales App** with "Mover offer — <name>" as Source of Business (duplicates by phone become a timeline note), the **Service Interest** sheet gets a row, and the mover's bonus is tracked. Truck products (caster cups, polish kit) can be **sold on site**, which opens the lead as "Won — sold on site" and credits the bonus at once. Bonus amounts are placeholders in `app.js` (`CATALOG`). |
 | Truck checklist, week view, my reports | drawer | |
-| Clock in / out | Clock tab | placeholder (local only) until it is wired to the BLP Work Clock |
+| Mover dashboard | Me tab | BLP Work Clock in/out and clock into a piano by serial (Store Map bridge), schedule + time off with office alerts, payroll history + clock-fix requests, services offered with WON highlighting and the monthly bonus tally |
+| Office view | `office.html` | every truck sharing a live ETA on one map; late (10+ min behind the first estimate) and quiet-phone (8+ min) flags; `fleet-watch` texts the office once per condition |
 | 💡 Suggest an improvement | top bar | Store Map bridge `action:'suggest'`, app "BLP Movers" → Store Map → Admin → App Requests (same fix list as every BLP app; Brigham logs shipped items on App Updates) |
 
 ## Sign-in
@@ -33,21 +34,22 @@ Google sign-in for BLP accounts (brighamlarsonpianos.com, the shop's *.blp@gmail
 ## Run it locally
 
 ```sh
-cp config.js config.local.js   # optional overrides; config.js is the live one
-python3 -m http.server 8642
+python3 server.py
 # open http://localhost:8642
 ```
 
-Without a Movers bridge URL in `config.js` the board runs on
-`data/demo-moves.json` so the whole app can be tried. The Netlify functions
-need `netlify dev` (or the live site) — locally the app degrades gracefully.
+`server.py` serves the app and mirrors the Netlify functions: `/api/sm` is
+proxied to the real Store Map bridge (so the time clock and payroll history
+are live), and offers / logs / schedules / ETA sessions are kept in
+`.dev-data.json`. Without a Movers bridge URL in `config.js` the board runs
+on `data/demo-moves.json`.
 
 ## Files
 
 - `index.html`, `styles.css`, `app.js` — the crew app (single page, hash routes)
 - `track.html`, `track.js` — the customer's live ETA page
 - `config.js` — public config: bridge URLs, team key, shop phone
-- `netlify/functions/` — `eta`, `location`, `track` (live ETA, Netlify Blobs), `log` (durable copies of reports / change orders / upsells), `config`
+- `netlify/functions/` — `eta`, `location`, `track` (live ETA, Netlify Blobs), `offer` + `offers-sweep` (offers, Sales App leads, WON watch), `schedule`, `log`, `config`, `sm` (proxy to the Store Map bridge for the Work Clock, Time Log, clock fixes, time off and 💡 requests)
 - `apps-script/Movers.gs` — Google bridge: calendar read, Drive uploads, sheet rows, calendar notes
 - `data/demo-moves.json` — example day
 - `DEPLOY.md` — one-time setup

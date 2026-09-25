@@ -45,3 +45,23 @@
   from = "/api/schedule"
   to = "/.netlify/functions/schedule"
   status = 200
+
+[[redirects]]
+  from = "/api/sm"
+  to = "/.netlify/functions/sm"
+  status = 200
+
+[[redirects]]
+  from = "/api/pianolog"
+  to = "/.netlify/functions/pianolog"
+  status = 200
+
+[[redirects]]
+  from = "/api/fleet"
+  to = "/.netlify/functions/fleet"
+  status = 200
+
+[[redirects]]
+  from = "/api/eta-report"
+  to = "/.netlify/functions/eta-report"
+  status = 200
