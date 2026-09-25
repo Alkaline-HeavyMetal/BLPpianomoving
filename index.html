@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap">
-<link rel="stylesheet" href="styles.css?v=6">
+<link rel="stylesheet" href="styles.css?v=8">
 </head>
 <body>
 
@@ -21,11 +21,15 @@
   <div class="gatecard">
     <img src="assets/blp-logo.png" alt="Brigham Larson Pianos">
     <h1>BLP Movers</h1>
-    <p class="lite">Pick your name so reports and texts carry it.</p>
-    <label class="fld">Your name<input id="gateName" type="text" autocomplete="name" placeholder="First Last" maxlength="40"></label>
-    <label class="fld">Team key<input id="gatePin" type="password" autocomplete="off" placeholder="the BLP app key" maxlength="40"></label>
-    <button class="btn primary" id="gateGo">Start the day</button>
+    <p class="lite">Sign in with your BLP Google account.</p>
+    <button class="btn primary gbtn" id="gateGoogle"><svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.5l6.7-6.7C35.6 2.5 30.2 0 24 0 14.6 0 6.5 5.4 2.6 13.3l7.8 6.1C12.3 13.7 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4 7.1-10 7.1-17.5z"/><path fill="#FBBC05" d="M10.4 28.6A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.1.8-4.6l-7.8-6.1A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.7l7.8-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.5-5.8c-2.1 1.4-4.9 2.3-8.4 2.3-6.3 0-11.7-4.2-13.6-10l-7.8 6.1C6.5 42.6 14.6 48 24 48z"/></svg> Sign in with Google</button>
     <div class="msg" id="gateMsg"></div>
+    <details class="gatealt"><summary>Use the team password instead</summary>
+      <label class="fld">Your name<input id="gateName" type="text" autocomplete="name" placeholder="First Last" maxlength="40"></label>
+      <label class="fld">Team password<input id="gatePin" type="password" autocomplete="current-password" placeholder="team password" maxlength="40"></label>
+      <button class="btn" id="gateGo">Start the day</button>
+    </details>
+    <p class="lite" style="font-size:11.5px">BLP team accounts only (brighamlarsonpianos.com and the shop's blp@gmail addresses).</p>
   </div>
 </div>
 
@@ -69,13 +73,13 @@
   <a href="https://pianologapp.netlify.app/" target="_blank" rel="noopener">🎹 Piano Log</a>
   <a href="https://blpshop.netlify.app/" target="_blank" rel="noopener">🔧 Shop App</a>
   <a href="https://blpcrm.netlify.app/" target="_blank" rel="noopener">📇 CRM</a>
-  <div class="dfoot"><button class="link" id="signOut">Switch name</button><span id="verTag">v0.1</span></div>
+  <div class="dfoot"><button class="link" id="signOut">Sign out</button><span id="verTag">v0.1</span></div>
 </nav>
 
 <div class="sheet" id="sheet" hidden><div class="sheetbox" id="sheetBox"></div></div>
 <div class="toast" id="toast" hidden></div>
 
 <script src="config.js?v=1"></script>
-<script src="app.js?v=8"></script>
+<script src="app.js?v=10"></script>
 </body>
 </html>

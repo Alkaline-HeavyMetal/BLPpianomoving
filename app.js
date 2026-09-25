@@ -39,8 +39,9 @@ function toast(msg, err) {
 }
 function sheet(html) {
   const s = $('#sheet'), b = $('#sheetBox');
-  b.innerHTML = '<div class="handle"></div>' + html; s.hidden = false;
+  b.innerHTML = '<div class="handle"></div><button type="button" class="sheetx" id="sheetX" aria-label="Close">✕</button>' + html; s.hidden = false;
   s.onclick = ev => { if (ev.target === s) closeSheet(); };
+  $('#sheetX', b).onclick = closeSheet;
   return b;
 }
 function closeSheet() { $('#sheet').hidden = true; $('#sheetBox').innerHTML = ''; }
@@ -56,23 +57,64 @@ async function copy(text) {
   catch (e) { toast('Could not copy — long-press to select', true); }
 }
 
-/* ===================== auth (name + team key) ===================== */
+/* ===================== auth: Google sign-in (BLP accounts) or the team password =====================
+ * Same OAuth pattern as the Store Map: a plain redirect to Google asking
+ * for an ID token, which comes back in the URL hash and is checked here
+ * (nonce, audience, expiry, allowed email). The team password is the
+ * fallback until Google sign-in is verified on every phone. */
+function b64url(s) { s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; return decodeURIComponent(escape(atob(s))); }
+function rand() { return Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, '0')).join(''); }
+function oidcLogin() {
+  if (!CFG.googleClientId) { setMsg('#gateMsg', 'Google sign-in is not configured yet — use the team password.', 'err'); return; }
+  const nonce = rand(), state = rand();
+  ls.set('blpNonce', nonce); ls.set('blpState', state);
+  const u = new URL('https://accounts.google.com/o/oauth2/v2/auth');
+  u.search = new URLSearchParams({ client_id: CFG.googleClientId, redirect_uri: location.origin + '/', response_type: 'id_token', scope: 'openid email profile', nonce, state, prompt: 'select_account' }).toString();
+  location.href = u.toString();
+}
+// Google answers on the site root with #id_token=…&state=… — consume it before hash routing sees it
+function consumeOidcHash() {
+  const h = location.hash.slice(1);
+  if (!/(^|&)id_token=/.test(h)) return false;
+  const q = new URLSearchParams(h);
+  history.replaceState(null, '', location.pathname + '#today');
+  const tok = q.get('id_token') || '';
+  try {
+    if (q.get('state') !== ls.get('blpState')) throw new Error('sign-in state mismatch — try again');
+    const p = JSON.parse(b64url(tok.split('.')[1] || ''));
+    if (p.nonce !== ls.get('blpNonce')) throw new Error('sign-in nonce mismatch — try again');
+    if (p.aud !== CFG.googleClientId) throw new Error('token is for a different app');
+    if (p.exp * 1000 < Date.now()) throw new Error('sign-in expired — try again');
+    const email = String(p.email || '').toLowerCase();
+    if (!p.email_verified || !CFG.allowedEmail.test(email)) throw new Error('That Google account is not a BLP team account (' + email + '). Use your brighamlarsonpianos.com login.');
+    S.me = { name: p.name || email.split('@')[0], email, pic: p.picture || '', key: CFG.teamKey, google: true, tokExp: p.exp * 1000, since: new Date().toISOString() };
+    ls.set('blpMover', JSON.stringify(S.me));
+    ls.del('blpNonce'); ls.del('blpState');
+    return true;
+  } catch (e) {
+    ls.set('blpAuthErr', e.message);
+    return false;
+  }
+}
 function loadMe() {
   S.me = ls.json('blpMover');
+  const err = ls.get('blpAuthErr'); if (err) { ls.del('blpAuthErr'); $('#gate').hidden = false; setMsg('#gateMsg', '✗ ' + err, 'err'); return false; }
   if (!S.me || !S.me.name) { $('#gate').hidden = false; return false; }
   $('#drawerWho').textContent = S.me.name;
+  $('#drawerRole').textContent = S.me.google ? S.me.email : 'team password';
   return true;
 }
+$('#gateGoogle').onclick = oidcLogin;
 $('#gateGo').onclick = () => {
   const name = $('#gateName').value.trim(), key = $('#gatePin').value.trim();
-  if (name.split(/\s+/).length < 2) { $('#gateMsg').className = 'msg err'; $('#gateMsg').textContent = 'First and last name, please — reports carry it.'; return; }
-  if (!key) { $('#gateMsg').className = 'msg err'; $('#gateMsg').textContent = 'Ask Karmel or Melissa for the BLP app key.'; return; }
-  S.me = { name, key, since: new Date().toISOString() };
+  if (name.split(/\s+/).length < 2) { setMsg('#gateMsg', 'First and last name, please — reports carry it.', 'err'); return; }
+  if (key !== CFG.teamKey) { setMsg('#gateMsg', 'That is not the team password.', 'err'); return; }
+  S.me = { name, key, google: false, since: new Date().toISOString() };
   ls.set('blpMover', JSON.stringify(S.me));
-  $('#gate').hidden = true; $('#drawerWho').textContent = name;
+  $('#gate').hidden = true; $('#drawerWho').textContent = name; $('#drawerRole').textContent = 'team password';
   loadMoves(S.day).then(route);
 };
-$('#signOut').onclick = () => { ls.del('blpMover'); location.reload(); };
+$('#signOut').onclick = () => { ls.del('blpMover'); location.hash = ''; location.reload(); };
 const KEY = () => (S.me && S.me.key) || CFG.teamKey || '';
 
 /* ===================== data: moves ===================== */
@@ -953,14 +995,14 @@ function renderMore() {
     ['✓', 'Truck checklist; week and month calendars'],
     ['✓', '💡 suggestions go to the Store Map\'s App Requests list'],
     ['soon', 'Clock in / out wired to the BLP Work Clock (and mileage per move for job costing)'],
-    ['soon', 'Google sign-in like the Store Map instead of name + key'],
+    ['✓', 'Google sign-in for BLP accounts, with the team password as the fallback'],
     ['soon', 'Office view: every truck live on one map, ETA drift alerts'],
     ['soon', 'Customer pre-arrival text the night before (clear the path, pets, parking)'],
     ['soon', 'Spanish toggle, like the Shop App'],
     ['soon', 'Piano Log link: pull make/model/serial straight from the log when the event has an SN'],
   ];
   $('#main').innerHTML = `<div class="page"><h1>More</h1>
-    <div class="card"><div class="rowk"><b>Name</b><span>${esc(S.me.name)}</span><b>Calendar</b><span>${CFG.moversBridgeUrl ? 'Movers bridge connected' : 'example data (no bridge URL yet)'}</span><b>Texts</b><span>${S.cfg.smsConfigured ? 'Twilio ready' : 'phone Messages app (Twilio not set)'}</span><b>Map key</b><span>${S.cfg.mapsKey ? 'set' : 'not set — tracking page uses the simple view'}</span><b>Version</b><span>${VERSION}</span></div></div>
+    <div class="card"><div class="rowk"><b>Name</b><span>${esc(S.me.name)}</span><b>Signed in</b><span>${S.me.google ? 'Google · ' + esc(S.me.email) : 'team password'}</span><b>Calendar</b><span>${CFG.moversBridgeUrl ? 'Movers bridge connected' : 'example data (no bridge URL yet)'}</span><b>Texts</b><span>${S.cfg.smsConfigured ? 'Twilio ready' : 'phone Messages app (Twilio not set)'}</span><b>Map key</b><span>${S.cfg.mapsKey ? 'set' : 'not set — tracking page uses the simple view'}</span><b>Version</b><span>${VERSION}</span></div></div>
     <div class="btns"><button class="btn" id="moreBulb">💡 Suggest an improvement</button><a class="btn" href="https://blpstoremap.netlify.app/" target="_blank" rel="noopener">🚀 App Updates (Store Map)</a></div>
     <h2>What this app does <small>and what is next</small></h2>
     <div class="road">${ROAD.map(([s, t]) => `<div><i class="${s === 'soon' ? 'soon' : ''}">${s === 'soon' ? '○' : '✓'}</i><span>${esc(t)}</span></div>`).join('')}</div>
@@ -1026,6 +1068,7 @@ $('#logoHome').onclick = () => { S.day = today(); location.hash = '#today'; rout
 $('#refreshBtn').onclick = async () => { $('#refreshBtn').textContent = '…'; await loadMoves(S.day); $('#refreshBtn').textContent = '↻'; route(); toast('Moves refreshed'); };
 $('#verTag').textContent = 'v' + VERSION;
 (async () => {
+  consumeOidcHash();
   if (!loadMe()) return;
   fetch('/api/config').then(r => r.json()).then(c => { S.cfg = c || {}; }).catch(() => {});
   if (S.share) startSharing(S.share);

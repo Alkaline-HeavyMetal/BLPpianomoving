@@ -22,6 +22,18 @@ Without Twilio the app still works: it opens the mover's Messages app with the
 link prefilled. Without a Maps key the customer page shows a simple progress
 road instead of the map.
 
+## 1b. Google sign-in
+The app uses the same "BLP Store Map" OAuth client as the other apps
+(`googleClientId` in `config.js`). In Google Cloud → APIs & Services →
+Credentials → that client, add to **Authorized JavaScript origins** and
+**Authorized redirect URIs**:
+
+- `https://blpmovers.netlify.app` (origin) and `https://blpmovers.netlify.app/` (redirect)
+- `http://localhost:8642` and `http://localhost:8642/` for local testing
+
+Until that is done, Google shows "redirect_uri_mismatch" and the team can use
+the password path on the sign-in screen (`teamKey` in `config.js`).
+
 ## 2. Movers bridge (Apps Script)
 1. script.google.com → New project → paste `apps-script/Movers.gs`.
 2. Run `doGet` once to authorize (Calendar, Drive, Sheets).

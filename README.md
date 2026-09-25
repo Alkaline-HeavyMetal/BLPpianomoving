@@ -27,6 +27,9 @@ Text ETA button and the stairs warning.
 | Clock in / out | Clock tab | placeholder (local only) until it is wired to the BLP Work Clock |
 | 💡 Suggest an improvement | top bar | Store Map bridge `action:'suggest'`, app "BLP Movers" → Store Map → Admin → App Requests (same fix list as every BLP app; Brigham logs shipped items on App Updates) |
 
+## Sign-in
+Google sign-in for BLP accounts (brighamlarsonpianos.com, the shop's *.blp@gmail.com, Brigham), same OAuth client as the Store Map. The team password is the fallback until Google is verified everywhere.
+
 ## Run it locally
 
 ```sh

@@ -193,7 +193,7 @@ details.raw pre{white-space:pre-wrap;font:inherit;padding:8px 0}
 
 /* ---------- bottom sheet ---------- */
 .sheet{position:fixed;inset:0;z-index:40;background:rgba(21,21,21,.45);display:flex;align-items:flex-end;justify-content:center}
-.sheetbox{background:var(--paper);width:100%;max-width:720px;max-height:92vh;overflow-y:auto;border-radius:18px 18px 0 0;
+.sheetbox{position:relative;background:var(--paper);width:100%;max-width:720px;max-height:92vh;overflow-y:auto;border-radius:18px 18px 0 0;
   padding:14px 18px calc(18px + env(safe-area-inset-bottom,0px));display:grid;gap:12px;animation:up .2s ease}
 @keyframes up{from{transform:translateY(30px);opacity:.5}to{transform:none;opacity:1}}
 @media (prefers-reduced-motion:reduce){.sheetbox{animation:none}}
@@ -350,3 +350,12 @@ details.raw pre{white-space:pre-wrap;font:inherit;padding:8px 0}
   .moves{grid-template-columns:repeat(3,minmax(0,1fr));column-gap:48px}
   .ups{grid-template-columns:repeat(4,minmax(0,1fr))}
 }
+
+.gbtn{gap:10px}
+.gatealt{text-align:left;display:grid;gap:12px;margin-top:6px}
+.gatealt summary{cursor:pointer;color:var(--red);font-weight:700;font-size:13px;text-align:center;list-style:none;text-decoration:underline;text-underline-offset:3px}
+.gatealt summary::-webkit-details-marker{display:none}
+
+.sheetx{position:absolute;top:10px;right:12px;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:#fff;color:var(--ink);font-size:15px;font-weight:700;display:grid;place-items:center;z-index:2}
+.sheetx:active{background:var(--line-soft)}
+.sheetbox h3{padding-right:44px}

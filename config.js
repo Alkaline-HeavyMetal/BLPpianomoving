@@ -10,7 +10,15 @@ window.BLP_MOVERS_CONFIG = {
   // button files bugs / ideas here as action:'suggest' with app 'BLP Movers',
   // so they show in Store Map → Admin → 💡 App Requests like every other app.
   storeMapBridgeUrl: 'https://script.google.com/macros/s/AKfycbxY4BKnr_Tr0iCTc9itCWhNYLvgszmkI1IoYSkbBWpyAqRtWI-yaUkJQjcVdgG58KXt/exec',
-  // Team key for writes (same value as BLP_APP_ACCESS_KEY on the Netlify site).
+  // Google sign-in: the "BLP Store Map" OAuth client used by the other BLP
+  // apps. This app's URL (https://blpmovers.netlify.app/ and, for local
+  // testing, http://localhost:8642/) must be added to that client's
+  // Authorized JavaScript origins AND Authorized redirect URIs in Google
+  // Cloud → APIs & Services → Credentials, or Google refuses the sign-in.
+  googleClientId: '110628682621-v65mkaoanv87sp75ggdfcrglfr7bkr8p.apps.googleusercontent.com',
+  // Accounts allowed in: BLP Workspace, the *.blp@gmail.com shop accounts, Brigham.
+  allowedEmail: /(@brighamlarsonpianos\.com|\.blp@gmail\.com)$|^brighamlarson@gmail\.com$/i,
+  // Team password — the fallback until Google sign-in is flawless.
   teamKey: 'pianoman',
   // Shop / office contact used in customer texts and the tracking page.
   shopPhone: '801-769-0054',
