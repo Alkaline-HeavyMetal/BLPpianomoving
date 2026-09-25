@@ -59,4 +59,4 @@ Labeled lines in the event description win: `Customer:`, `Phone:`, `Piano:`,
 anywhere, "14 stairs up", "one flight", "no stairs", "no bench", a make name
 (Yamaha, Kawai, Hailun, Baldwin, Steinway…), "SN 12345", "$495", "collect
 $245", "gate 4471", "legs and lyre". The Store Map's conventions carry over:
-`Tanner/Jace: …` for the crew and a leading `x ` for done.
+`Josh/Thayne: …` for the crew and a leading `x ` for done.
