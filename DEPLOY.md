@@ -15,6 +15,7 @@ Environment variables:
 | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` | texting the tracking link | same as the Sales App |
 | `TWILIO_MESSAGING_SERVICE_SID` (or `TWILIO_FROM`) | " | the customer-facing A2P messaging service |
 | `GOOGLE_MAPS_BROWSER_KEY` | the truck map on the customer page | Maps JavaScript API + Geocoding + Directions enabled; restrict to `https://blpmovers.netlify.app/*` |
+| `SALESAPP_URL`, `SALESAPP_PASSCODE` | opening leads in the Sales App from offers | default `https://blpsalesapp.netlify.app`; passcode defaults to `BLP_APP_ACCESS_KEY` |
 | `GOOGLE_MAPS_SERVER_KEY` | optional | Geocoding API only; lets the fallback view estimate ETA without the browser key |
 
 Without Twilio the app still works: it opens the mover's Messages app with the

@@ -217,7 +217,7 @@ async function route() {
   $$('#tabs a').forEach(a => a.classList.toggle('on', a.dataset.tab === v || ((v === 'week' || v === 'month') && a.dataset.tab === 'today')));
   const main = $('#main');
   window.scrollTo(0, 0);
-  const need = { today: 1, details: 1, report: 1, change: 1 }[v];
+  const need = { today: 1, details: 1, report: 1, change: 1, offer: 1 }[v];
   const id = arg ? decodeURIComponent(arg) : '';
   let m = id ? S.all[id] : null;
   if (v === 'today' && S.loadedDay !== S.day) { main.innerHTML = '<div class="empty">Loading moves…</div>'; await loadMoves(S.day, true); }
@@ -230,7 +230,8 @@ async function route() {
     case 'details': return renderDetails(m);
     case 'report': return renderReport(m);
     case 'change': return renderChange(m);
-    case 'services': case 'upsell': return renderUpsell(arg ? decodeURIComponent(arg) : '');
+    case 'services': case 'upsell': return renderServices('', arg ? decodeURIComponent(arg) : '');
+    case 'offer': return renderServices(m, '');
     case 'checklist': return renderChecklist();
     case 'history': return renderHistory();
     case 'clock': return renderClock();
@@ -293,6 +294,7 @@ function moveCard(m, isNext) {
       <div class="mlinks">
         <a href="#report/${id}">✎ Condition report</a>
         <a href="#change/${id}">$ Move differs</a>
+        <a href="#offer/${id}">✦ Customer interested</a>
         <a href="#details/${id}" class="quiet">Details ›</a>
       </div>
     </div></article>`;
@@ -396,7 +398,7 @@ function renderDetails(m) {
       <a class="btn nav" href="${m.nav ? mapsUrl(m.nav) : '#'}" target="_blank" rel="noopener">${pinIcon()} Navigate</a>
       <button class="btn" id="cpAddr">Copy address</button>
     </div>
-    <div class="mlinks"><a href="#report/${id}">✎ Condition report</a><a href="#change/${id}">$ Move differs</a><a href="#services/${encodeURIComponent(m.type || '')}">✦ Care & services${m.type ? ' for a ' + esc(m.type.toLowerCase()) : ''}</a></div>
+    <div class="mlinks"><a href="#report/${id}">✎ Condition report</a><a href="#change/${id}">$ Move differs</a><a href="#offer/${id}">✦ Customer interested</a></div>
     ${prepList(m)}
     <details class="raw" open><summary>Calendar event</summary><pre>${esc(m.title)}\n${esc(m.location)}\n\n${esc(m.description || '(no description)')}</pre></details>
     ${m.done ? '<div class="lite">Marked done on the calendar.</div>' : `<button class="btn wide" id="markDone">✓ Mark this move done on the calendar</button>`}
@@ -582,7 +584,7 @@ function renderReport(m) {
       $('#main').innerHTML = `<div class="page"><a class="back" href="#today">‹ Today</a><h1>Report filed</h1>
         <p>${esc(m.customer)} · ${esc(R.stage)} · ${flags.length ? flags.length + ' item' + (flags.length === 1 ? '' : 's') + ' flagged' : 'no damage noted'} · ${photos.length} photo${photos.length === 1 ? '' : 's'}${vids.length ? ' · ' + vids.length + ' video' + (vids.length === 1 ? '' : 's') : ''}.</p>
         ${result.folderUrl ? `<a class="btn wide" target="_blank" rel="noopener" href="${esc(result.folderUrl)}">Open the Drive folder</a>` : '<div class="demo">Example mode — nothing was uploaded. Connect the Movers bridge in config.js.</div>'}
-        ${R.stage === 'pickup' ? `<a class="btn wide sm" href="#report/${id}">Start the delivery report</a>` : ''}
+        ${R.stage === 'pickup' ? `<a class="btn wide sm" href="#report/${id}">Start the delivery report</a>` : `<a class="btn wide sm" href="#offer/${id}">✦ Customer interested in a service or product?</a>`}
         <a class="btn eta wide" href="#today">Back to today</a></div>`;
     } catch (e) { setMsg('#rMsg', '✗ ' + e.message, 'err'); btn.disabled = false; prog.hidden = true; }
   }
@@ -680,48 +682,162 @@ function renderChange(m) {
   paint();
 }
 
-/* ===================== UPSELL ===================== */
-const UPSELLS = [
-  { s: 'First tuning after the move', when: 'Every move · at delivery', for: ['Grand', 'Upright'], why: 'Moving and a new room knock a piano out of tune. BLP tunes it once it has settled, 2–4 weeks after delivery.', say: '"Give it a few weeks to settle, then we\'ll come tune it so it sounds like it did in the showroom. Want me to have the office call you to set that up?"' },
-  { s: 'Humidity control (Piano Life Saver)', when: 'Dry homes · wood stoves · basements', for: ['Grand', 'Upright'], why: 'Utah air is dry. A Dampp-Chaser system under the piano keeps the soundboard stable, so it stays in tune longer and cracks less.', say: '"This room gets pretty dry in winter. A humidity system underneath keeps it in tune and protects the soundboard. It\'s a one-time install."' },
-  { s: 'Bench', when: 'No bench, or a wobbly one', for: ['Grand', 'Upright', 'Digital'], why: 'A matching or adjustable artist bench finishes the piano and is a fast add-on sale.', say: '"There\'s no bench coming with this one — we have matching and adjustable benches at the store. Want a photo of the options?"' },
-  { s: 'Cleaning & polish', when: 'Dusty interior · dull finish', for: ['Grand', 'Upright'], why: 'Interior cleaning and a finish polish make an older piano look new in its new home.', say: '"There\'s a lot of dust under the strings. Our techs can do a full interior clean and polish when they come to tune."' },
-  { s: 'Regulation & voicing', when: 'Older pianos · uneven touch', for: ['Grand', 'Upright'], why: 'If keys feel uneven or the tone is harsh, a regulation restores the touch. High-value shop work.', say: '"Some of these keys feel heavier than others — that\'s regulation, and our shop can even it out."' },
-  { s: 'Key tops & key service', when: 'Chipped, yellow, or missing key tops', for: ['Grand', 'Upright'], why: 'New key tops are a visible, satisfying repair BLP does in-house.', say: '"A few of these key tops are chipped. We replace whole sets in the shop — it makes a huge difference."' },
-  { s: 'Caster cups & floor protection', when: 'Hardwood or tile floors', for: ['Grand', 'Upright'], why: 'Protects the floor and stops the piano from creeping. Easy add-on at delivery.', say: '"On this hardwood you\'ll want caster cups under the wheels — we carry them in the truck."' },
-  { s: 'Piano cover or lamp', when: 'Grands · sunny rooms · kids', for: ['Grand'], why: 'A cover protects the finish from sun and scratches; a lamp helps practice.', say: '"With that window, a cover will keep the finish from fading. We have string covers too."' },
-  { s: 'Utah Piano Conservatory lessons', when: 'Kids · first piano', for: ['Grand', 'Upright', 'Digital'], why: 'BLP runs the Utah Piano Conservatory. A family with a new piano and no teacher is a warm lead.', say: '"Is someone taking lessons? The Conservatory is right at the store — I can have them call you."' },
-  { s: 'Trade-up, appraisal, or restoration', when: 'Old or rough pianos', for: ['Grand', 'Upright'], why: 'BLP buys pianos, takes trade-ins, and restores heirlooms. A tired piano at pickup is a sales lead.', say: '"This is a beautiful old piano. BLP restores these — or if you\'re thinking about upgrading, they\'d take it on trade."' },
+/* ===================== PIANO CARE & SERVICES (offers, on-site sales, mover bonuses) =====================
+ * Each item has the marketing text the customer receives, an on-site price
+ * when the truck can sell it right there, and the mover's bonus when the
+ * office closes it. BONUS amounts are placeholders until the office sets
+ * them — edit them here (or move them to App Settings later). */
+const BONUS_NOTE = 'Bonus amounts are placeholders until the office sets them.';
+const SITE = 'https://www.brighamlarsonpianos.com';
+// text = what the customer receives: two short sentences + a link to the
+// service page (video, photos, pricing, book button live there). image = an
+// optional MMS photo URL (leave blank to send plain SMS). Fill in from the
+// site as the office picks the hero image per service.
+const CATALOG = [
+  { id: 'tuning', s: 'Tuning', kind: 'service', when: 'Every move · 2–4 weeks after delivery', for: ['Grand', 'Upright'], bonus: 10, url: SITE + '/pages/piano-services', image: '',
+    why: 'Moving and a new room knock a piano out of tune. BLP tunes it once it has settled.',
+    say: '"Give it a few weeks to settle, then we\'ll come tune it so it sounds like it did in the showroom. Want me to have the office set that up?"',
+    text: 'Hi {first}, this is {mover} with Brigham Larson Pianos — thank you for having us today! Your piano will settle into its new room over the next few weeks, and then it\'s ready for its first tuning. Book it here or reply YES and we\'ll call: {url}' },
+  { id: 'player', s: 'QRS player system add-on', kind: 'service', when: 'Any acoustic piano · entertaining · families', for: ['Grand', 'Upright'], bonus: 75, url: SITE + '/pages/digital-player-piano-technology', image: '',
+    why: 'A QRS self-playing system fits any grand or upright. It plays from an app over home Wi-Fi with playlists, streamed music, and background ambiance for events. High-value install.',
+    say: '"Did you know this piano can play itself? We install a QRS system that runs from your phone — it\'s amazing for parties. Want to see a 30-second video?"',
+    text: 'Hi {first}, {mover} with Brigham Larson Pianos. Your piano can play itself: a QRS player system installs on any grand or upright and plays from an app on your phone — dinner music, holidays, kids\' favorites. Watch it in action: {url}' },
+  { id: 'silent', s: 'Silent Play technology', kind: 'service', when: 'Shared walls · early or late practice · kids', for: ['Grand', 'Upright'], bonus: 50, url: SITE + '/pages/piano-services', image: '',
+    why: 'Silent Play lets them practice on their real acoustic piano through headphones, any hour, with a concert-grand sound. Perfect for townhomes, apartments, and late-night practicers.',
+    say: '"With the neighbors this close, a Silent system lets you practice at midnight with headphones and nobody hears a thing — it\'s your real piano, same touch."',
+    text: 'Hi {first}, {mover} from Brigham Larson Pianos. Practice at any hour without waking the house: Silent Play adds headphones to your real acoustic piano — same keys and touch, concert-grand sound only you hear. See how it works: {url}' },
+  { id: 'acrylickeys', s: 'New acrylic keytops', kind: 'service', when: 'Chipped, yellowed, or mismatched keys', for: ['Grand', 'Upright'], bonus: 20, url: SITE + '/pages/piano-services', image: '',
+    why: 'A full set of new acrylic keytops, fitted and leveled in the BLP shop. The most visible upgrade on an older piano.',
+    say: '"A few of these keytops are chipped and yellowed. Our shop fits a whole new set — the keyboard looks brand new."',
+    text: 'Hi {first}, {mover} with Brigham Larson Pianos. A brand-new set of acrylic keytops, fitted and leveled in our shop, makes an older keyboard look and feel new again. Before-and-afters and pricing here: {url}' },
+  { id: 'ivoryrepair', s: 'Ivory keytop repair', kind: 'service', when: 'Vintage pianos with real ivory', for: ['Grand', 'Upright'], bonus: 20, url: SITE + '/pages/piano-restoration', image: '',
+    why: 'Real ivory is worth keeping. BLP re-glues lifted tops, replaces missing pieces from matched stock, and re-polishes the set.',
+    say: '"These are real ivories — worth keeping. Our shop can replace the missing ones from matched stock and polish the whole set."',
+    text: 'Hi {first}, {mover} from Brigham Larson Pianos. Your piano has real ivory keys — worth preserving. Our shop repairs lifted and missing ivories from matched stock and polishes the set so it looks original. Details here: {url}' },
+  { id: 'castercups', s: 'Caster cups', kind: 'product', price: 25, when: 'Hardwood or tile floors', for: ['Grand', 'Upright'], bonus: 3, url: SITE + '/pages/piano-services', image: '',
+    why: 'Protects the floor and stops the piano from creeping. Sold from the truck, on the spot.',
+    say: '"On this hardwood you\'ll want caster cups under the wheels — we have them in the truck."',
+    text: 'Hi {first}, {mover} with Brigham Larson Pianos. Caster cups under the wheels protect your floor and keep the piano from creeping. We carry them on the truck — reply YES and we\'ll bring a set, or call {phone}.' },
+  { id: 'refinishing', s: 'Refinishing', kind: 'service', when: 'Worn, scratched, or dated finish', for: ['Grand', 'Upright'], bonus: 100, url: SITE + '/pages/piano-refinishing', image: '',
+    why: 'Full strip and refinish in the BLP shop: new color or sheen, high-gloss conversion, replated hardware. A tired cabinet becomes a showpiece.',
+    say: '"The finish is worn but the piano is solid. Our shop refinishes these — you could even go high-gloss black or a new color. Want to see examples?"',
+    text: 'Hi {first}, {mover} from Brigham Larson Pianos. Your piano\'s finish has seen some life, but the instrument is solid — our shop refinishes pianos in any color or sheen, including high-gloss. Browse before-and-afters here: {url}' },
+  { id: 'heirloom', s: 'Heirloom family restoration', kind: 'service', when: 'Grandma\'s piano · sentimental pianos', for: ['Grand', 'Upright'], bonus: 150, url: SITE + '/pages/family-heirloom-piano-legacy-stories-restorations', image: '',
+    why: 'BLP\'s signature service: the family piano fully restored so the next generation plays it. Emotional, high-value, and the story gets featured.',
+    say: '"This was your grandmother\'s? BLP restores family heirlooms like this from the inside out — they even tell the family\'s story on the site."',
+    text: 'Hi {first}, {mover} with Brigham Larson Pianos. A family piano like yours deserves to be played for another generation. Our heirloom restoration brings it back inside and out, and we love telling each family\'s story. See a few of them here: {url}' },
+  { id: 'refurbishing', s: 'Refurbishing', kind: 'service', when: 'Older pianos that play but feel tired', for: ['Grand', 'Upright'], bonus: 60, url: SITE + '/pages/piano-restoration', image: '',
+    why: 'Short of a full rebuild: regulation, voicing, cleaning, new felts and strings where needed. Restores the touch and tone at a fraction of restoration.',
+    say: '"Some of these keys feel uneven and the tone is a little harsh — a refurbish in our shop evens the touch and brightens it up."',
+    text: 'Hi {first}, {mover} from Brigham Larson Pianos. A refurbish brings back an even touch and a warm, clear tone without a full rebuild — regulation, voicing, cleaning, and fresh parts where needed. What\'s included: {url}' },
+  { id: 'humidity', s: 'Humidity control (Piano Life Saver)', kind: 'service', when: 'Dry homes · wood stoves · basements', for: ['Grand', 'Upright'], bonus: 25, url: SITE + '/pages/piano-services', image: '',
+    why: 'Utah air is dry. A Dampp-Chaser system under the piano keeps the soundboard stable, so it stays in tune longer and cracks less.',
+    say: '"This room gets pretty dry in winter. A humidity system underneath keeps it in tune and protects the soundboard. It\'s a one-time install."',
+    text: 'Hi {first}, {mover} from Brigham Larson Pianos. Utah\'s dry air is the #1 thing that pushes pianos out of tune and cracks soundboards. A Piano Life Saver system installs under your piano once and protects it year-round. Learn more or reply YES: {url}' },
+  { id: 'bench', s: 'Bench', kind: 'product', price: 0, when: 'No bench, or a wobbly one', for: ['Grand', 'Upright', 'Digital'], bonus: 15, url: SITE + '/pages/piano-services', image: '',
+    why: 'A matching or adjustable artist bench finishes the piano. Sold from the showroom; the office confirms the finish and price.',
+    say: '"There\'s no bench coming with this one — we have matching and adjustable benches at the store. Want a photo of the options?"',
+    text: 'Hi {first}, {mover} with Brigham Larson Pianos. We have matching and adjustable artist benches in stock that fit your piano\'s finish. Reply YES and our office will text you photos and prices, or call {phone}.' },
+  { id: 'polishkit', s: 'Piano polish & cleaning kit', kind: 'product', price: 30, when: 'Any high-gloss or satin finish', for: ['Grand', 'Upright', 'Digital'], bonus: 3, url: '', image: '',
+    why: 'The right polish for the finish, sold from the truck. Household cleaners haze lacquer.',
+    say: '"Household sprays haze this finish — we carry the polish the shop uses. Want a kit?"',
+    text: 'Hi {first}, {mover} from Brigham Larson Pianos. Household sprays can haze a piano finish; we carry the polish and cloths our shop uses. Reply YES and we\'ll bring a kit, or call {phone}.' },
+  { id: 'lessons', s: 'Utah Piano Conservatory lessons', kind: 'service', when: 'Kids · first piano', for: ['Grand', 'Upright', 'Digital'], bonus: 20, url: SITE, image: '',
+    why: 'BLP runs the Utah Piano Conservatory. A family with a new piano and no teacher is a warm lead.',
+    say: '"Is someone taking lessons? The Conservatory is right at the store — I can have them call you."',
+    text: 'Hi {first}, {mover} from Brigham Larson Pianos. Congratulations on the new piano! The Utah Piano Conservatory, right at our store, has openings for beginners and returning players of all ages. Reply YES and the Conservatory will reach out about a first lesson, or call {phone}.' },
 ];
-function renderUpsell(type) {
-  const list = UPSELLS.filter(u => !type || u.for.includes(type));
-  $('#main').innerHTML = `<div class="page">
-    <h1>Piano care & services${type ? ' <small class="lite">for a ' + esc(type.toLowerCase()) + '</small>' : ''}</h1>
-    <p class="lite">Every piano needs a little care after a move. If something fits, mention it and note their interest. The office takes it from there.</p>
-    <div class="ups">${list.map((u, i) => `<div class="up"><div class="when">${esc(u.when)}</div><b>${esc(u.s)}</b><p>${esc(u.why)}</p><div class="say">${esc(u.say)}</div>
-      <div class="act"><button class="btn sm" data-u="${i}" data-i="Yes — book it">They'd like this</button><button class="btn sm" data-u="${i}" data-i="Maybe">Maybe later</button></div></div>`).join('')}</div>
-  </div>`;
-  $$('[data-u]').forEach(b => b.onclick = () => upsellSheet(list[+b.dataset.u], b.dataset.i));
+const money = n => '$' + (Math.round(n * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 0 });
+function fillText(t, m, svc) {
+  const first = (m && m.customer ? m.customer.split(/\s+/)[0] : 'there');
+  return t.replace(/{first}/g, first).replace(/{mover}/g, S.me.name.split(' ')[0]).replace(/{phone}/g, CFG.shopPhone || '').replace(/{shop}/g, CFG.shopName || '').replace(/{service}/g, svc.s).replace(/{url}/g, svc.url || '');
 }
-function upsellSheet(u, interest) {
-  const todays = S.moves.filter(m => S.day === today());
-  const b = sheet(`<h3>${esc(u.s)}</h3><div class="lite">${esc(interest)}</div>
-    <label class="fld">Which customer<select id="upMove">${todays.map(m => `<option value="${esc(m.id)}">${esc(m.customer)} · ${esc(m.piano)}</option>`).join('')}<option value="">Someone else</option></select></label>
-    <label class="fld">Note for the office<textarea id="upNote" placeholder="what they said, best time to reach them"></textarea></label>
-    <button class="btn eta wide" id="upSend">Log it</button><div class="msg" id="upMsg"></div>`);
-  $('#upSend', b).onclick = async () => {
-    const m = S.moves.find(x => x.id === $('#upMove', b).value) || {};
-    const lead = { service: u.s, interest, note: $('#upNote', b).value };
-    const move = { eventId: m.eventId, date: m.date, customer: m.customer, phone: m.phone, piano: m.piano };
-    $('#upSend', b).disabled = true;
-    try {
-      if (CFG.moversBridgeUrl) { const j = await bridgePost(CFG.moversBridgeUrl, { key: KEY(), action: 'upsell', who: S.me.name, move, lead }); if (!j.ok) throw new Error(j.error); }
-      await api('/api/log', { kind: 'upsell', who: S.me.name, data: { ...lead, customer: m.customer || '', piano: m.piano || '', moveId: m.id || '' } }).catch(() => {});
-      toast('Noted — the office will follow up'); closeSheet();
-    } catch (e) { setMsg('#upMsg', '✗ ' + e.message, 'err'); $('#upSend', b).disabled = false; }
+let bonusCache = null;
+async function bonusStrip() {
+  try {
+    const j = await fetch('/api/offer?key=' + encodeURIComponent(KEY()) + '&who=' + encodeURIComponent(S.me.name)).then(r => r.json());
+    if (j.ok) bonusCache = j;
+  } catch (e) {}
+  const el = $('#bonusStrip'); if (!el) return;
+  if (!bonusCache) { el.innerHTML = `<b>Your bonuses</b><span>tallies appear once the site is live</span>`; return; }
+  el.innerHTML = `<b>Your bonuses</b><span><em>${money(bonusCache.earned || 0)}</em> earned · <em>${money(bonusCache.pending || 0)}</em> pending on ${bonusCache.open || 0} open offer${bonusCache.open === 1 ? '' : 's'}</span>`;
+}
+function renderServices(m, type) {
+  type = type || (m && m.type) || '';
+  const list = CATALOG.filter(u => !type || u.for.includes(type));
+  const id = m ? encodeURIComponent(m.id) : '';
+  $('#main').innerHTML = `<div class="page">
+    ${m ? `<a class="back" href="#details/${id}">‹ ${esc(m.customer)}</a>` : ''}
+    <h1>${m ? 'What is ' + esc(m.customer.split(/\s+/)[0]) + ' interested in?' : 'Piano care & services'}${type ? ` <small class="lite">for a ${esc(type.toLowerCase())}</small>` : ''}</h1>
+    <p class="lite">${m ? 'Tap the item. The customer gets a friendly text about it, a lead opens in the Sales App with you as the source, and your bonus is tracked. Truck items can be sold on the spot.' : 'Every piano needs a little care after a move. If something fits, mention it and note their interest. The office takes it from there.'}</p>
+    <div class="bonus" id="bonusStrip"><b>Your bonuses</b><span>…</span></div>
+    ${!type ? `<div class="seg" id="typeFilter">${['All', 'Grand', 'Upright', 'Digital'].map(t => `<button type="button" data-v="${t === 'All' ? '' : t}" class="${(type || '') === (t === 'All' ? '' : t) ? 'on' : ''}">${t}</button>`).join('')}</div>` : ''}
+    <div class="ups">${list.map(u => `<div class="up"><div class="uphead"><div class="when">${esc(u.when)}</div><span class="bchip" title="${esc(BONUS_NOTE)}">Bonus ${money(u.bonus)}</span></div><b>${esc(u.s)}</b>${u.kind === 'product' && u.price ? `<div class="lite">On the truck · ${money(u.price)}</div>` : ''}<p>${esc(u.why)}</p>${u.url ? `<a class="uplink" href="${esc(u.url)}" target="_blank" rel="noopener">Show the customer the page ↗</a>` : ''}<div class="say">${esc(u.say)}</div>
+      <div class="act"><button class="btn sm eta" data-offer="${u.id}">${msgIcon()} Text the offer</button>${u.kind === 'product' ? `<button class="btn sm" data-sold="${u.id}">Sold on site</button>` : `<button class="btn sm" data-interest="${u.id}">Just note interest</button>`}</div></div>`).join('')}</div>
+    <div class="lite">${esc(BONUS_NOTE)}</div>
+  </div>`;
+  bonusStrip();
+  const tf = $('#typeFilter'); if (tf) $$('button', tf).forEach(b => b.onclick = () => { location.hash = '#services/' + encodeURIComponent(b.dataset.v); });
+  const pick = (u, mode) => m ? offerSheet(m, u, mode) : whichCustomer(u, mode);
+  $$('[data-offer]').forEach(b => b.onclick = () => pick(CATALOG.find(u => u.id === b.dataset.offer), 'text'));
+  $$('[data-sold]').forEach(b => b.onclick = () => pick(CATALOG.find(u => u.id === b.dataset.sold), 'sold'));
+  $$('[data-interest]').forEach(b => b.onclick = () => pick(CATALOG.find(u => u.id === b.dataset.interest), 'note'));
+}
+function whichCustomer(u, mode) {
+  const todays = S.moves;
+  const b = sheet(`<h3>${esc(u.s)}</h3><div class="lite">Which customer?</div>
+    <label class="fld">Customer<select id="wcMove">${todays.map(m => `<option value="${esc(m.id)}">${esc(m.customer)} · ${esc(m.piano)}</option>`).join('')}<option value="">Someone else…</option></select></label>
+    <div id="wcOther" hidden class="grid2"><label class="fld">Name<input id="wcName" placeholder="First Last"></label><label class="fld">Phone<input id="wcPhone" type="tel" placeholder="801-555-0100"></label></div>
+    <button class="btn eta wide" id="wcGo">Continue</button>`);
+  const sel = $('#wcMove', b);
+  sel.onchange = () => { $('#wcOther', b).hidden = !!sel.value; };
+  if (!todays.length) { sel.value = ''; $('#wcOther', b).hidden = false; }
+  $('#wcGo', b).onclick = () => {
+    let m = S.all[sel.value];
+    if (!m) { const name = $('#wcName', b).value.trim(); if (!name) return toast('Add a name', true); m = { id: 'adhoc-' + Date.now(), customer: name, phone: $('#wcPhone', b).value.trim(), piano: '', type: '', date: today(), eventId: '' }; }
+    offerSheet(m, u, mode);
   };
 }
-
+function offerSheet(m, u, mode) {
+  const text = fillText(u.text, m, u);
+  const b = sheet(`<h3>${esc(u.s)}</h3><div class="lite">${esc(m.customer)}${m.piano ? ' · ' + esc(m.piano) : ''} · <span class="bchip">Bonus ${money(u.bonus)}</span></div>
+    <div class="seg" id="modeSeg"><button type="button" data-v="text" class="${mode === 'text' ? 'on' : ''}">Text the offer</button>${u.kind === 'product' ? `<button type="button" data-v="sold" class="${mode === 'sold' ? 'on' : ''}">Sold on site</button>` : ''}<button type="button" data-v="note" class="${mode === 'note' ? 'on' : ''}">Note interest only</button></div>
+    <label class="fld">Customer phone<input id="ofPhone" type="tel" value="${esc(m.phone || '')}" placeholder="801-555-0100"></label>
+    <div id="ofText" ${mode === 'text' ? '' : 'hidden'}><label class="fld">Message they receive<textarea id="ofBody" maxlength="480" style="min-height:150px">${esc(text)}</textarea></label></div>
+    <div id="ofSold" ${mode === 'sold' ? '' : 'hidden'} class="grid2">
+      <label class="fld">Amount collected<input id="ofAmt" inputmode="decimal" value="${u.price || ''}" placeholder="$"></label>
+      <label class="fld">Quantity<input id="ofQty" inputmode="numeric" value="1"></label>
+      <label class="fld" style="grid-column:1/-1">Paid by<select id="ofPay"><option>Card (reader)</option><option>Cash</option><option>Venmo</option><option>Office will invoice</option></select></label>
+    </div>
+    <label class="fld">Note for the office<textarea id="ofNote" placeholder="what they said, best time to reach them"></textarea></label>
+    <button class="btn eta wide" id="ofGo">${mode === 'sold' ? 'Record the sale' : mode === 'text' ? 'Send text + open lead' : 'Note it + open lead'}</button>
+    <div class="msg" id="ofMsg"></div>
+    <div class="lite">A lead opens in the BLP Sales App with <b>${esc(S.me.name)}</b> as the source, so the bonus is yours when it closes.${u.kind === 'product' ? ' On-site sales count as closed right away.' : ''}</div>`);
+  $$('#modeSeg button', b).forEach(x => x.onclick = () => {
+    mode = x.dataset.v; $$('#modeSeg button', b).forEach(y => y.classList.toggle('on', y === x));
+    $('#ofText', b).hidden = mode !== 'text'; $('#ofSold', b).hidden = mode !== 'sold';
+    $('#ofGo', b).textContent = mode === 'sold' ? 'Record the sale' : mode === 'text' ? 'Send text + open lead' : 'Note it + open lead';
+  });
+  $('#ofGo', b).onclick = async () => {
+    const btn = $('#ofGo', b); btn.disabled = true; setMsg('#ofMsg', 'Working…');
+    const phone = $('#ofPhone', b).value.trim();
+    const body = { mode, mover: S.me.name, note: $('#ofNote', b).value.trim(), text: $('#ofBody', b).value.trim(),
+      amount: mode === 'sold' ? (+$('#ofAmt', b).value || 0) * (+$('#ofQty', b).value || 1) : 0, qty: +$('#ofQty', b).value || 1, payment: $('#ofPay', b).value,
+      move: { id: m.id, customer: m.customer, phone, piano: m.piano, type: m.type, date: m.date, eventId: m.eventId },
+      service: { id: u.id, name: u.s, kind: u.kind, price: u.price || 0, bonus: u.bonus, url: u.url || '', image: u.image || '' } };
+    if (mode === 'text' && !phone) { setMsg('#ofMsg', 'Add a phone number to text.', 'err'); btn.disabled = false; return; }
+    try {
+      let j = { ok: true, offline: true };
+      try { j = await api('/api/offer', body); } catch (e) { j = { ok: true, offline: true }; }
+      if (!j.ok) throw new Error(j.error || 'could not file the offer');
+      if (CFG.moversBridgeUrl) bridgePost(CFG.moversBridgeUrl, { key: KEY(), action: 'upsell', who: S.me.name, move: body.move, lead: { service: u.s, interest: mode === 'sold' ? 'Sold on site' : mode === 'text' ? 'Texted offer' : 'Maybe', note: body.note, mode, amount: body.amount, payment: body.payment, leadId: j.leadId || '', bonus: u.bonus } }).catch(() => {});
+      if (mode === 'text' && !(j.sms && j.sms.sent)) { location.href = smsUrl(phone, body.text); }
+      const lead = j.leadId ? (j.leadStatus === 'existing' ? 'noted on their existing Sales App lead' : 'lead ' + j.leadId + ' opened in the Sales App') : (j.offline ? 'lead opens once the site is live' : 'Sales App not reachable — the office was noted');
+      toast(mode === 'sold' ? `Sale recorded · bonus ${money(u.bonus)} earned` : mode === 'text' ? 'Offer texted · ' + lead : 'Noted · ' + lead);
+      closeSheet(); bonusCache = null; bonusStrip();
+    } catch (e) { setMsg('#ofMsg', '✗ ' + e.message, 'err'); btn.disabled = false; }
+  };
+}
 /* ===================== WEEK / HISTORY / CHECKLIST / CLOCK / MORE ===================== */
 function viewSwitch(on) {
   return `<div class="vswitch">${[['day', 'Day', '#today'], ['week', 'Week', '#week'], ['month', 'Month', '#month']].map(([k, l, h]) => `<a href="${h}" class="${on === k ? 'on' : ''}">${l}</a>`).join('')}${on !== 'day' ? `<button type="button" class="vtoday" id="vToday">Today</button>` : ''}</div>`;
@@ -833,7 +949,8 @@ function renderMore() {
     ['✓', 'Live ETA texts with the BLP truck on a map (Uber-style), plus late / arrived / thank-you texts'],
     ['✓', 'Condition report with photos, video, signature — filed to Drive + sheet + the calendar event'],
     ['✓', 'Change orders with customer signature; office texted instantly'],
-    ['✓', 'Piano care & services guide with interest logging; truck checklist; week and month calendars'],
+    ['✓', 'Piano care & services: friendly offer texts, on-site sales, Sales App leads with the mover as source, bonus tally'],
+    ['✓', 'Truck checklist; week and month calendars'],
     ['✓', '💡 suggestions go to the Store Map\'s App Requests list'],
     ['soon', 'Clock in / out wired to the BLP Work Clock (and mileage per move for job costing)'],
     ['soon', 'Google sign-in like the Store Map instead of name + key'],

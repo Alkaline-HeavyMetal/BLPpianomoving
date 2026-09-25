@@ -227,9 +227,10 @@ function changeOrder_(req) {
 }
 function upsell_(req) {
   var m = req.move || {}, u = req.lead || {};
-  var sh = sheet_('Service Interest', ['At', 'Date', 'Customer', 'Phone', 'Piano', 'Service', 'Interest', 'Note', 'Mover', 'Event']);
-  sh.appendRow([new Date().toISOString(), m.date || '', m.customer || '', m.phone || '', m.piano || '', u.service || '', u.interest || '', u.note || '', req.who || '', m.eventId || '']);
-  if (u.interest === 'Yes — book it') notifyOffice_('✦ Service interest YES — ' + (m.customer || 'customer') + ' wants ' + (u.service || 'a service') + '. ' + (u.note || '') + ' — ' + (req.who || 'mover') + (m.phone ? ' · ' + m.phone : ''));
+  var sh = sheet_('Service Interest', ['At', 'Date', 'Customer', 'Phone', 'Piano', 'Service', 'Interest', 'Note', 'Mover', 'Event', 'Mode', 'Amount', 'Payment', 'Sales App lead', 'Mover bonus']);
+  sh.appendRow([new Date().toISOString(), m.date || '', m.customer || '', m.phone || '', m.piano || '', u.service || '', u.interest || '', u.note || '', req.who || '', m.eventId || '',
+    u.mode || '', u.amount || '', u.payment || '', u.leadId || '', u.bonus || '']);
+  if (u.interest === 'Sold on site' || u.interest === 'Yes — book it') notifyOffice_('✦ Service interest YES — ' + (m.customer || 'customer') + ' wants ' + (u.service || 'a service') + '. ' + (u.note || '') + ' — ' + (req.who || 'mover') + (m.phone ? ' · ' + m.phone : ''));
   return { ok: true };
 }
 // Texts teammates by first name through the Sales App's request-notify —

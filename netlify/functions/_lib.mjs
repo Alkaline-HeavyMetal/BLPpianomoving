@@ -34,11 +34,12 @@ export function e164(phone) {
 }
 // Twilio REST — same env vars as the Sales App (TWILIO_ACCOUNT_SID,
 // TWILIO_AUTH_TOKEN, TWILIO_MESSAGING_SERVICE_SID or TWILIO_FROM).
-export async function sendSms(to, body) {
+export async function sendSms(to, body, mediaUrl) {
   const sid = process.env.TWILIO_ACCOUNT_SID, tok = process.env.TWILIO_AUTH_TOKEN;
   const svc = process.env.TWILIO_MESSAGING_SERVICE_SID, from = process.env.TWILIO_FROM;
   if (!sid || !tok || !(svc || from)) return { sent: false, reason: 'twilio not configured' };
   const form = new URLSearchParams({ To: to, Body: body });
+  if (mediaUrl && /^https:\/\//.test(mediaUrl)) form.set('MediaUrl', mediaUrl);
   if (svc) form.set('MessagingServiceSid', svc); else form.set('From', from);
   const r = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
     method: 'POST',

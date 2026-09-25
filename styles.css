@@ -292,3 +292,61 @@ details.raw pre{white-space:pre-wrap;font:inherit;padding:8px 0}
 .mev.done{background:#D9D4C8;color:#6B6760}
 .mmore{font-size:8.5px;color:var(--mut);font-weight:700;padding-left:2px}
 @media (min-width:600px){.cal{margin:0}.ev{font-size:11px}.mev{font-size:10.5px}.mcell{min-height:96px}.cal .gut{width:44px;font-size:11px}}
+
+/* offers + bonuses */
+.uphead{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.bchip{display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;background:var(--good-bg);color:var(--good);font-size:11px;font-weight:800;letter-spacing:.02em;white-space:nowrap}
+.bonus{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;border:1px solid var(--line);border-radius:12px;background:#fff;padding:10px 14px;font-size:13px;color:var(--mut)}
+.bonus b{font-family:var(--serif);font-size:16px;color:var(--ink)}
+.bonus em{font-style:normal;font-weight:800;color:var(--good);font-variant-numeric:tabular-nums}
+
+.uplink{font-size:12.5px;font-weight:700;color:var(--red);text-decoration:underline;text-underline-offset:3px}
+
+/* =====================================================================
+   Desktop & laptop (≥ 900px): the drawer becomes a permanent left rail,
+   the bottom tabs disappear, and the board uses the width — two columns
+   of moves, wider forms, a taller calendar. Same Ivory Keys system. */
+@media (min-width:900px){
+  body{display:grid;grid-template-columns:250px minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr);height:100%}
+  .bar{grid-column:1/-1;padding-inline:24px}
+  .bar .logo{height:40px}
+  #menuBtn{display:none}
+  .share{grid-column:2;margin:0}
+  .main{grid-column:2;grid-row:3;overflow-y:auto;max-width:none;padding:24px 40px 48px;width:100%}
+  .tabs,.scrim{display:none!important}
+  .drawer{grid-column:1;grid-row:2/4;position:static;transform:none;width:auto;height:auto;transition:none;padding:22px 14px;box-shadow:none;border-right:1px solid #2A2A2A}
+  .drawer a{padding:11px 14px;font-size:14px}
+  .dhead b{font-size:22px}
+  .page{max-width:1080px}
+  .dayhead h1{font-size:32px}
+  .dayhead .sub{font-size:14px}
+  .demo{max-width:720px}
+  .moves{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:40px;align-items:start}
+  .move{grid-template-columns:96px 1fr;gap:16px;padding:20px 0}
+  .move.live{margin:0;padding-inline:0;background:none;box-shadow:inset 4px 0 0 var(--red);padding-left:14px}
+  .mtime{font-size:28px}
+  .mname{font-size:22px}
+  .btns{grid-template-columns:1fr 1fr}
+  .empty{grid-column:1/-1}
+  .grid2{grid-template-columns:1fr 1fr 1fr}
+  .cond{grid-template-columns:1fr 1fr;column-gap:32px}
+  .cond .condrow{grid-column:auto}
+  .ups{grid-template-columns:repeat(3,minmax(0,1fr));align-items:start}
+  .lines{max-width:720px}
+  .rowk{grid-template-columns:140px 1fr;font-size:14.5px}
+  .cal{margin:0}
+  .mcell{min-height:120px}
+  .mev{font-size:11px;padding:3px 5px}
+  .ev{font-size:12px;padding:5px 6px}
+  .cal .gut{width:48px;font-size:11px}
+  .whead .wday b{font-size:20px;width:34px;height:34px}
+  .sheetbox{max-width:640px;border-radius:18px;margin-bottom:6vh;max-height:86vh}
+  .sheet{align-items:center}
+  #gate .gatecard{width:420px}
+  .toast{bottom:32px}
+}
+@media (min-width:1400px){
+  .main{padding-inline:64px}
+  .moves{grid-template-columns:repeat(3,minmax(0,1fr));column-gap:48px}
+  .ups{grid-template-columns:repeat(4,minmax(0,1fr))}
+}

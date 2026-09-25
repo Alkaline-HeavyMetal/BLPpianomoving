@@ -35,3 +35,8 @@
   from = "/api/log"
   to = "/.netlify/functions/log"
   status = 200
+
+[[redirects]]
+  from = "/api/offer"
+  to = "/.netlify/functions/offer"
+  status = 200
