@@ -500,6 +500,15 @@ function renderReport(m) {
       <p class="lite">${esc(m.customer)} · ${esc(m.piano)} · ${esc(fmtShort(m.date))}. Walk the piano with the customer before it moves; photograph anything you mark.</p>
       <div class="seg" id="stageSeg"><button type="button" data-v="pickup" class="${R.stage === 'pickup' ? 'on' : ''}">At pickup</button><button type="button" data-v="delivery" class="${R.stage === 'delivery' ? 'on' : ''}">At delivery</button></div>
 
+      <h2>Photos & video <small>${shots.length ? shots.length + ' added' : 'add several angles'}</small></h2>
+      <div class="shots" id="shots">${shots.map((s, i) => `<div class="shot">${s.kind === 'video' ? `<video src="${s.url}" muted playsinline></video><span class="vid">▶</span>` : `<img src="${s.url}" alt="">`}<span class="tag">${esc(s.tag)}</span><button type="button" class="x" data-i="${i}">✕</button></div>`).join('')}
+        <label class="addshot"><span>📷</span>Photo<input type="file" accept="image/*" capture="environment" multiple data-tag="Photo"></label>
+        <label class="addshot"><span>⚠</span>Damage<input type="file" accept="image/*" capture="environment" multiple data-tag="Damage"></label>
+        <label class="addshot"><span>🎥</span>Video<input type="file" accept="video/*" capture="environment" data-tag="Video"></label>
+        <label class="addshot"><span>🖼</span>From library<input type="file" accept="image/*,video/*" multiple data-tag="Photo"></label>
+      </div>
+
+
       <h2>Piano</h2>
       <div class="seg" id="typeSeg">${['Grand', 'Upright', 'Digital', 'Other'].map(t => `<button type="button" data-v="${t}" class="${R.type === t ? 'on' : ''}">${t}</button>`).join('')}</div>
       <div class="grid2">
@@ -530,14 +539,6 @@ function renderReport(m) {
 
       <h2>Works?</h2>
       <div class="cond">${FUNCS.map(f => `<div class="condrow" data-f="${esc(f)}"><div class="lbl">${esc(f)}</div><div class="seg good">${['Yes', 'No', 'Not checked'].map(v => `<button type="button" data-v="${v}" class="${(R.functional[f] || '') === v ? 'on' : ''}">${v}</button>`).join('')}</div></div>`).join('')}</div>
-
-      <h2>Photos & video <small>${shots.length ? shots.length + ' added' : 'add several angles'}</small></h2>
-      <div class="shots" id="shots">${shots.map((s, i) => `<div class="shot">${s.kind === 'video' ? `<video src="${s.url}" muted playsinline></video><span class="vid">▶</span>` : `<img src="${s.url}" alt="">`}<span class="tag">${esc(s.tag)}</span><button type="button" class="x" data-i="${i}">✕</button></div>`).join('')}
-        <label class="addshot"><span>📷</span>Photo<input type="file" accept="image/*" capture="environment" multiple data-tag="Photo"></label>
-        <label class="addshot"><span>⚠</span>Damage<input type="file" accept="image/*" capture="environment" multiple data-tag="Damage"></label>
-        <label class="addshot"><span>🎥</span>Video<input type="file" accept="video/*" capture="environment" data-tag="Video"></label>
-        <label class="addshot"><span>🖼</span>From library<input type="file" accept="image/*,video/*" multiple data-tag="Photo"></label>
-      </div>
 
       <h2>Notes</h2>
       <label class="fld">Anything else<textarea id="rNotes" placeholder="e.g. customer pointed out the old water ring on the lid">${esc(R.notes)}</textarea></label>
@@ -1007,27 +1008,66 @@ async function renderDash() {
   </div>`;
   dashClock(); dashSchedule(); dashOffers(); dashPayroll();
 }
-/* ---- time clock */
-function dashClock() {
+/* ---- time clock: the Store Map's Work Clock (payroll day clock, action dayin/dayout)
+ * and its piano clock (action clockin/clockout by serial, phase "Moving").
+ * Same bridge, same payloads the Store Map dashboard sends, so payroll and
+ * job costing stay in one system. */
+const SM = () => CFG.storeMapBridgeUrl;
+const smUser = () => ({ name: S.me.name, email: S.me.email || '' });
+function punchGeo() {
+  return new Promise(res => {
+    if (!navigator.geolocation) return res('unavailable');
+    const t = setTimeout(() => res('timeout'), 6000);
+    navigator.geolocation.getCurrentPosition(p => { clearTimeout(t); res({ lat: +p.coords.latitude.toFixed(5), lng: +p.coords.longitude.toFixed(5), acc: Math.round(p.coords.accuracy) }); },
+      e => { clearTimeout(t); res(e.code === 1 ? 'denied' : 'unavailable'); }, { enableHighAccuracy: true, timeout: 5500, maximumAge: 30000 });
+  });
+}
+const sameTech = (a, b) => String(a || '').toLowerCase().replace(/\s*\(.*$/, '').trim() === String(b || '').toLowerCase().trim();
+async function clockState() {
+  const out = { day: null, piano: null, live: false };
+  try {
+    const [pay, tc] = await Promise.all([bridgeGet(SM() + '?fn=payroll'), bridgeGet(SM() + '?fn=timeclock')]);
+    out.live = !!(pay.ok || tc.ok);
+    out.day = (pay.open || []).find(o => sameTech(o.tech, S.me.name)) || null;
+    out.today = (pay.today || []).filter(o => sameTech(o.tech, S.me.name));
+    out.piano = (tc.open || []).find(o => sameTech(o.tech, S.me.name)) || null;
+    out.todayMinutes = (tc.todayMinutes || {})[S.me.name] || 0;
+  } catch (e) {}
+  S.clockLive = out.live;
+  return out;
+}
+async function dashClock() {
   const el = $('#dClock'); if (!el) return;
-  const st = ls.json('blpClock') || {};
-  const onShift = st.in && !st.out;
-  const piano = ls.json('blpPianoClock');
-  el.innerHTML = `<h2>Time clock <small>${S.clockLive ? 'BLP Work Clock' : 'this phone only until the Work Clock is wired'}</small></h2>
-    <div class="clockrow"><div class="clockstate ${onShift ? 'on' : ''}"><b>${onShift ? 'Clocked in' : 'Clocked out'}</b><small>${st.in ? (onShift ? 'since ' : 'in ') + new Date(st.in).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : 'not in today'}${st.out ? ' · out ' + new Date(st.out).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : ''}</small></div>
+  el.innerHTML = '<h2>Time clock</h2><div class="lite">checking the BLP Work Clock…</div>';
+  const st = await clockState();
+  const fmt = t => new Date(t).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: TZ });
+  const onShift = !!st.day;
+  const doneToday = (st.today || []).filter(o => o.end);
+  el.innerHTML = `<h2>Time clock <small>${st.live ? 'BLP Work Clock · live' : 'Work Clock unreachable — try again'}</small></h2>
+    <div class="clockrow"><div class="clockstate ${onShift ? 'on' : ''}"><b>${onShift ? 'Clocked in' : 'Clocked out'}</b><small>${onShift ? 'since ' + fmt(st.day.start) : doneToday.length ? 'today: ' + doneToday.map(o => fmt(o.start) + '–' + fmt(o.end)).join(', ') : 'not in yet today'}</small></div>
       <button class="btn ${onShift ? '' : 'primary'} sm" id="ckIn" ${onShift ? 'disabled' : ''}>Clock in</button><button class="btn ${onShift ? 'primary' : ''} sm" id="ckOut" ${onShift ? '' : 'disabled'}>Clock out</button></div>
-    <h3 class="h3">Clock into a piano <small>job costing by serial</small></h3>
-    ${piano ? `<div class="pianoclock"><b>${esc(piano.serial)}</b><span>${esc(piano.label || '')} · since ${new Date(piano.at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span><button class="btn sm" id="pkStop">Stop</button></div>` : `<div class="clockrow"><input id="pkSerial" class="serialin" placeholder="serial # or pick a move" list="pkList"><datalist id="pkList">${S.moves.filter(m => m.serial).map(m => `<option value="${esc(m.serial)}">${esc(m.customer)} · ${esc(m.piano)}</option>`).join('')}</datalist><button class="btn sm" id="pkStart">Start</button></div>`}
-    <div class="lite">Every punch is also sent to the Store Map's Work Clock and phase clocks when the bridge is connected, so payroll and job costing stay in one place.</div>`;
-  const punch = async (action, extra) => {
-    const rec = { action, at: Date.now(), ...extra };
-    await api('/api/log', { kind: 'clock', who: S.me.name, data: rec }).catch(() => {});
-    if (CFG.moversBridgeUrl) bridgePost(CFG.moversBridgeUrl, { key: KEY(), action: 'clock', who: S.me.name, punch: rec }).catch(() => {});
+    <h3 class="h3">Clock into a piano <small>job costing by serial · phase "Moving"</small></h3>
+    ${st.piano ? `<div class="pianoclock"><b>${esc(st.piano.serial)}</b><span>${esc(st.piano.piano || '')} · ${esc(st.piano.phase || 'Moving')} · since ${fmt(st.piano.start)}</span><button class="btn sm" id="pkStop">Stop</button></div>`
+      : `<div class="clockrow"><input id="pkSerial" class="serialin" placeholder="serial # or pick a move" list="pkList"><datalist id="pkList">${S.moves.filter(m => m.serial).map(m => `<option value="${esc(m.serial)}">${esc(m.customer)} · ${esc(m.piano)}</option>`).join('')}</datalist><button class="btn sm" id="pkStart" ${onShift ? '' : 'disabled title="clock in first"'}>Start</button></div>`}
+    <div class="msg" id="ckMsg"></div>
+    <div class="lite">Punches go straight to the Store Map's Payroll Clock and Time Log. Piano time needs an open day; clocking out closes any open piano session. Forgot to clock out? Movers are auto-stamped at 8:00 PM.</div>`;
+  const send = async (body, btn) => {
+    if (btn) btn.disabled = true; setMsg('#ckMsg', 'Punching…');
+    const j = await bridgePost(SM(), { pin: KEY(), source: 'movers', user: smUser(), ...body });
+    if (j.error === 'geofence') { setMsg('#ckMsg', `✗ The Work Clock blocked this punch: you are ${j.awayMiles || '?'} mi from the store. Ask for a clock fix below and the office will enter the time.`, 'err'); return null; }
+    if (j.error === 'dayfirst') { setMsg('#ckMsg', '✗ Clock in for the day first, then start the piano.', 'err'); return null; }
+    if (j.error) { setMsg('#ckMsg', '✗ ' + j.error, 'err'); return null; }
+    return j;
   };
-  $('#ckIn').onclick = () => { ls.set('blpClock', JSON.stringify({ in: Date.now() })); punch('in'); toast('Clocked in'); dashClock(); };
-  $('#ckOut').onclick = () => { ls.set('blpClock', JSON.stringify({ ...st, out: Date.now() })); if (piano) { ls.del('blpPianoClock'); punch('pianostop', { serial: piano.serial }); } punch('out'); toast('Clocked out'); dashClock(); };
-  const ps = $('#pkStart'); if (ps) ps.onclick = () => { const serial = $('#pkSerial').value.trim(); if (!serial) return toast('Enter a serial number', true); const m = S.moves.find(x => x.serial === serial); ls.set('blpPianoClock', JSON.stringify({ serial, label: m ? m.customer + ' · ' + m.piano : '', at: Date.now() })); punch('pianostart', { serial }); toast('Clocked into ' + serial); dashClock(); };
-  const pk = $('#pkStop'); if (pk) pk.onclick = () => { ls.del('blpPianoClock'); punch('pianostop', { serial: piano.serial, minutes: Math.round((Date.now() - piano.at) / 60000) }); toast('Stopped'); dashClock(); };
+  $('#ckIn').onclick = async () => { const geo = await punchGeo(); const j = await send({ action: 'dayin', geo }, $('#ckIn')); if (j) { toast(j.already ? 'Already clocked in' : 'Clocked in'); dashClock(); dashPayroll(); } else $('#ckIn').disabled = false; };
+  $('#ckOut').onclick = async () => { const geo = await punchGeo(); const j = await send({ action: 'dayout', geo }, $('#ckOut')); if (j) { toast(j.closed ? `Clocked out · ${Math.round(j.closed.minutes / 60 * 10) / 10} h today` : 'No open day'); dashClock(); dashPayroll(); } else $('#ckOut').disabled = false; };
+  const ps = $('#pkStart'); if (ps) ps.onclick = async () => {
+    const serial = $('#pkSerial').value.trim(); if (!serial) return toast('Enter a serial number', true);
+    const m = S.moves.find(x => x.serial === serial);
+    const j = await send({ action: 'clockin', dayGate: 1, serial, row: '', phase: 'Moving', pianoName: m ? (m.piano + ' — ' + m.customer).slice(0, 80) : '' }, ps);
+    if (j) { toast('Clocked into ' + serial); dashClock(); } else ps.disabled = false;
+  };
+  const pk = $('#pkStop'); if (pk) pk.onclick = async () => { const j = await send({ action: 'clockout' }, pk); if (j) { toast(j.closed ? `Stopped · ${j.closed.minutes} min on ${j.closed.serial}` : 'Nothing was open'); dashClock(); } else pk.disabled = false; };
 }
 /* ---- schedule */
 async function dashSchedule() {
@@ -1044,7 +1084,7 @@ async function dashSchedule() {
       <button class="btn sm" id="toAdd">Add time off</button>
       <button class="btn eta wide" id="schedSave">Save schedule · alerts the office</button>
       <div class="msg" id="schedMsg"></div>
-      <div class="lite">Every save emails info@brighamlarsonpianos.com and texts the office that ${esc(S.me.name.split(' ')[0])}'s schedule changed.</div>`;
+      <div class="lite">Every save emails info@brighamlarsonpianos.com and texts the office that ${esc(S.me.name.split(' ')[0])}'s schedule changed. Time off also files into the Store Map's Time Off list for approval.</div>`;
     $$('select[data-d]', el).forEach(sel => sel.onchange = () => { sched.week[sel.dataset.d] = sel.value; });
     $$('[data-rm]', el).forEach(b => b.onclick = () => { sched.timeOff.splice(+b.dataset.rm, 1); paint(); });
     $('#toAdd', el).onclick = () => { const f = $('#toFrom', el).value, t = $('#toTo', el).value || f; if (!f) return toast('Pick a start date', true); sched.timeOff.push({ from: f, to: t, note: $('#toNote', el).value.trim() }); paint(); };
@@ -1056,6 +1096,10 @@ async function dashSchedule() {
         let j = { ok: true, offline: true };
         try { j = await api('/api/schedule', { who: S.me.name, schedule: sched, summary }); } catch (e) {}
         if (CFG.moversBridgeUrl) bridgePost(CFG.moversBridgeUrl, { key: KEY(), action: 'schedule', who: S.me.name, schedule: sched, summary }).catch(() => {});
+        for (const t of sched.timeOff.filter(x => !x.filed)) {
+          const r = await bridgePost(SM(), { pin: KEY(), user: smUser(), action: 'timeoff', start: t.from, end: t.to || t.from, times: '', note: (t.note || '') + ' (BLP Movers app)' }).catch(() => ({}));
+          if (r && r.ok) t.filed = true;
+        }
         ls.set('blpSched', JSON.stringify(sched));
         setMsg('#schedMsg', j.offline ? 'Saved on this phone — the office alert goes out once the site is live.' : '✓ Saved. The office has been alerted.', 'ok');
         toast('Schedule saved');
@@ -1086,31 +1130,47 @@ async function dashOffers() {
       : '<div class="lite">Nothing offered yet. Tap ✦ Customer interested on a move card after the delivery.</div>'}
     <div class="lite">When a BLP sales rep marks the lead WON in the Sales App, the row turns green here and you get a text. ${esc(BONUS_NOTE)}</div>`;
 }
-/* ---- payroll punch history */
+/* ---- payroll punch history: straight from the Store Map's Payroll Clock + Time Log */
 async function dashPayroll() {
   const el = $('#dPay'); if (!el) return;
-  let rows = [];
-  try { const j = await fetch('/api/log?key=' + encodeURIComponent(KEY()) + '&kind=clock&who=' + encodeURIComponent(S.me.name)).then(r => r.json()); rows = (j.rows || []).slice(0, 40); } catch (e) {}
-  const fmt = t => new Date(t).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-  el.innerHTML = `<h2>Payroll clock history <small>${S.clockLive ? 'from the BLP Work Clock' : 'punches from this app'}</small></h2>
-    ${rows.length ? `<table class="punches"><tr><th>When</th><th>Punch</th><th>Piano</th><th></th></tr>${rows.map(r => `<tr><td>${esc(fmt(r.at || r.at))}</td><td>${esc({ in: 'Clock in', out: 'Clock out', pianostart: 'Piano start', pianostop: 'Piano stop' }[r.action] || r.action)}</td><td>${esc(r.serial || '')}${r.minutes ? ' · ' + r.minutes + ' min' : ''}</td><td><button type="button" class="link red" data-fix="${esc(r.id)}">fix</button></td></tr>`).join('')}</table>` : '<div class="lite">No punches yet.</div>'}
-    <div class="lite">Spot a wrong punch? Tap fix and the office gets a clock-fix request with your note.</div>`;
-  $$('[data-fix]', el).forEach(b => b.onclick = () => clockFixSheet(rows.find(r => r.id === b.dataset.fix)));
+  let pay = [], tl = [], live = false;
+  try {
+    const [p, t] = await Promise.all([bridgeGet(SM() + '?fn=payrollrows&days=60'), bridgeGet(SM() + '?fn=timelog&days=60').catch(() => ({}))]);
+    live = !!p.ok;
+    pay = (p.rows || []).filter(r => sameTech(r.tech, S.me.name) && !r.voided).sort((a, b) => String(b.start).localeCompare(String(a.start)));
+    tl = (t.rows || []).filter(r => sameTech(r.tech, S.me.name) && !r.voided).sort((a, b) => String(b.start).localeCompare(String(a.start)));
+  } catch (e) {}
+  const d = iso => new Date(iso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: TZ });
+  const t = iso => iso ? new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: TZ }) : '—';
+  const hrs = m => (Math.round((m || 0) / 6) / 10).toFixed(1);
+  const mk = monthKey();
+  const monthMin = pay.filter(r => (r.date || '').slice(0, 7) === mk).reduce((a, r) => a + (+r.minutes || 0), 0);
+  const weekStartD = weekStart(today());
+  const weekMin = pay.filter(r => r.date >= weekStartD).reduce((a, r) => a + (+r.minutes || 0), 0);
+  el.innerHTML = `<h2>Payroll clock history <small>${live ? 'BLP Payroll Clock · last 60 days' : 'Work Clock unreachable'}</small></h2>
+    <div class="tally" style="margin:0 0 12px"><div><b>${hrs(weekMin)} h</b><span>this week</span></div><div><b>${hrs(monthMin)} h</b><span>this month · ${pay.filter(r => (r.date || '').slice(0, 7) === mk).length} days</span></div></div>
+    ${pay.length ? `<table class="punches"><tr><th>Day</th><th>In</th><th>Out</th><th>Hours</th><th>Note</th><th></th></tr>${pay.slice(0, 40).map(r => `<tr class="${/auto:|forgot/i.test(r.note || '') ? 'flag' : ''}"><td>${esc(d(r.start))}</td><td>${esc(t(r.start))}</td><td>${esc(t(r.end))}</td><td>${r.end ? hrs(r.minutes) : 'open'}</td><td class="note">${esc((r.note || '').replace(/^auto: forgot to clock out.*$/i, '⚠ auto clock-out — check this').replace(/^added: by/i, 'added by'))}${r.source === 'adjust' ? '' : ''}</td><td><button type="button" class="link red" data-fix="${r.row}">fix</button></td></tr>`).join('')}</table>` : '<div class="lite">No punches in the last 60 days.</div>'}
+    ${tl.length ? `<h3 class="h3">Piano time <small>Time Log</small></h3><table class="punches"><tr><th>Day</th><th>Serial</th><th>Piano</th><th>Phase</th><th>Min</th></tr>${tl.slice(0, 25).map(r => `<tr><td>${esc(d(r.start))}</td><td>${esc(r.serial)}</td><td>${esc(r.piano || '')}</td><td>${esc(r.phase || '')}</td><td>${r.minutes || ''}</td></tr>`).join('')}</table>` : ''}
+    <div class="lite">Rows marked ⚠ were closed automatically because nobody clocked out. Tap fix to send the office the real time before payroll.</div>`;
+  $$('[data-fix]', el).forEach(b => b.onclick = () => clockFixSheet(pay.find(r => String(r.row) === b.dataset.fix)));
 }
 function clockFixSheet(r) {
-  const b = sheet(`<h3>Clock fix request</h3><div class="lite">${esc(new Date(r.at).toLocaleString('en-US'))} · ${esc(r.action)}</div>
-    <label class="fld">What should it be?<input id="cfWhen" type="datetime-local"></label>
-    <label class="fld">Why<textarea id="cfNote" placeholder="forgot to clock out, phone died…"></textarea></label>
-    <button class="btn eta wide" id="cfGo">Send to the office</button><div class="msg" id="cfMsg"></div>`);
+  const d = r.date || today();
+  const hhmm = iso => iso ? new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: TZ }) : '';
+  const b = sheet(`<h3>Clock fix request</h3><div class="lite">${esc(d)} · in ${esc(hhmm(r.start) || '—')} · out ${esc(hhmm(r.end) || 'open')}${r.note ? ' · ' + esc(r.note) : ''}</div>
+    <div class="grid2"><label class="fld">Correct clock in<input id="cfIn" type="time" value="${esc(hhmm(r.start))}"></label><label class="fld">Correct clock out<input id="cfOut" type="time" value="${esc(hhmm(r.end))}"></label></div>
+    <label class="fld">What happened<textarea id="cfNote" placeholder="forgot to clock out at the last delivery, phone died…"></textarea></label>
+    <button class="btn eta wide" id="cfGo">Send to the office</button><div class="msg" id="cfMsg"></div>
+    <div class="lite">Goes to the Store Map's Clock Fix Requests; the office adjusts the punch and you get a text.</div>`);
   $('#cfGo', b).onclick = async () => {
-    const fix = { punchId: r.id, was: r.at, action: r.action, shouldBe: $('#cfWhen', b).value, note: $('#cfNote', b).value.trim() };
-    if (!fix.note && !fix.shouldBe) return setMsg('#cfMsg', 'Add the correct time or a note.', 'err');
+    const inAt = $('#cfIn', b).value, outAt = $('#cfOut', b).value, why = $('#cfNote', b).value.trim();
+    if (!why && !inAt && !outAt) return setMsg('#cfMsg', 'Add the correct times or a note.', 'err');
+    const fm = v => v ? new Date('2000-01-01T' + v).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '?';
+    const note = `${d.slice(5).replace('-', '/')}: clock in ${fm(inAt)}, clock out ${fm(outAt)}. ${why} (BLP Movers app)`;
     $('#cfGo', b).disabled = true;
-    try {
-      await api('/api/log', { kind: 'clockfix', who: S.me.name, data: fix }).catch(() => {});
-      if (CFG.moversBridgeUrl) await bridgePost(CFG.moversBridgeUrl, { key: KEY(), action: 'clockfix', who: S.me.name, fix });
-      toast('Clock fix sent to the office'); closeSheet();
-    } catch (e) { setMsg('#cfMsg', '✗ ' + e.message, 'err'); $('#cfGo', b).disabled = false; }
+    const j = await bridgePost(SM(), { pin: KEY(), user: smUser(), action: 'clockfix', clock: 'pay', serial: '', note, date: d, inAt, outAt, lang: 'en', reqId: 'cfx-mv-' + Date.now().toString(36) });
+    if (j.ok) { toast(j.duplicate ? 'Already requested' : 'Clock fix sent to the office'); closeSheet(); }
+    else { setMsg('#cfMsg', '✗ ' + (j.error || 'could not send'), 'err'); $('#cfGo', b).disabled = false; }
   };
 }
 function renderMore() {
@@ -1123,8 +1183,7 @@ function renderMore() {
     ['✓', 'Piano care & services: friendly offer texts, on-site sales, Sales App leads with the mover as source, bonus tally'],
     ['✓', 'Truck checklist; week and month calendars'],
     ['✓', '💡 suggestions go to the Store Map\'s App Requests list'],
-    ['✓', 'Mover dashboard: time clock + clock into a piano by serial, my schedule (alerts info@ and the office), payroll history with clock-fix requests, services offered with WON highlighting and the monthly bonus tally'],
-    ['soon', 'Work Clock + piano clocks wired through the Store Map bridge (next step)'],
+    ['✓', 'Mover dashboard: the BLP Work Clock + clock into a piano by serial (Store Map Time Log), my schedule (alerts info@ and the office), payroll history with clock-fix requests, services offered with WON highlighting and the monthly bonus tally'],
     ['✓', 'Google sign-in for BLP accounts, with the team password as the fallback'],
     ['soon', 'Office view: every truck live on one map, ETA drift alerts'],
     ['soon', 'Customer pre-arrival text the night before (clear the path, pets, parking)'],

@@ -398,3 +398,5 @@ details.raw pre{white-space:pre-wrap;font:inherit;padding:8px 0}
 .punches th{text-align:left;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);padding:4px 6px 6px;border-bottom:1px solid var(--ink)}
 .punches td{padding:8px 6px;border-bottom:1px solid var(--line-soft);font-variant-numeric:tabular-nums}
 @media (min-width:900px){.dgrid{grid-template-columns:1fr 1fr 1fr}.dcard.wide{grid-column:1/-1}.big em{font-size:48px}}
+.punches tr.flag td{background:var(--warn-bg)}
+.punches td.note{color:var(--mut);font-size:12px;max-width:220px}
